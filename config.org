@@ -1,0 +1,353 @@
+#+PROPERTY: header-args :comments link
+
+* emacs configuration
+  
+** configuration reload helper
+   
+   `C-x C-l`: reload this file.
+
+#+BEGIN_SRC emacs-lisp
+  (defun reload-config ()
+    (interactive)
+    (load-file user-init-file)
+    (princ "Configuration reloaded.")
+    )
+
+  (global-set-key (kbd "C-x C-l") 'reload-config)
+#+END_SRC
+
+** package management
+   
+   Package installation is idempotent, using `straight` and `use-package`.
+
+*** Repos
+    
+    Add the GNU, ELPA, MELPA, MELPA-stable, Marmalade and Org repos.
+    
+#+BEGIN_SRC emacs-lisp
+  (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
+			   ("elpa" . "http://tromey.com/elpa/")
+			   ("melpa" . "http://melpa.org/packages/")
+			   ("melpa-stable" . "http://stable.melpa.org/packages/")
+			   ("org" . "http://orgmode.org/elpa/")))
+#+END_SRC
+
+*** Straight
+    
+    Set up straight for installing and updating packages.
+
+#+BEGIN_SRC emacs-lisp
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+      (bootstrap-version 5))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+#+END_SRC
+
+*** use-package
+    
+    Set up use-package for organsing package configuration.
+    We also configure straight to use use-package to actually install packages.
+
+#+BEGIN_SRC emacs-lisp
+  (straight-use-package 'use-package)
+  (setq straight-use-package-by-default t)
+#+END_SRC
+
+*** Look 'n feel
+    
+    Disable GUI bits, load the monokai theme, and change the base font.
+    
+#+BEGIN_SRC emacs-lisp
+    (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
+    (set-frame-font "Fantasque Sans Mono 14" nil t)
+#+END_SRC
+
+*** Theme
+    
+#+BEGIN_SRC emacs-lisp    
+  (use-package twilight-theme
+    :ensure t
+    :config
+    (load-theme 'twilight t)
+    )
+#+END_SRC
+
+*** TODO Mode line
+    
+    What to show at the bottom of buffers.
+
+#+BEGIN_SRC emacs-lisp
+
+#+END_SRC
+
+
+** env
+
+   Set environment variables and PATH, as well as loading `exec-env-from-shell` to grab environment variables set by zsh.
+
+#+BEGIN_SRC emacs-lisp
+  ;; set the below so tmux knows not to load when we eval .zshrc
+  ;; this is respected by ohmyzsh's tmux plugin
+  (setenv "EMACS" "1")
+  (use-package exec-path-from-shell
+    :init
+    (when (memq window-system '(mac ns x))
+       (exec-path-from-shell-initialize)
+  ;; extra environment variables to bring in, in addition to the standard ones like PATH
+       (exec-path-from-shell-copy-env "GOPATH")
+       (exec-path-from-shell-copy-env "GOBIN")
+       (exec-path-from-shell-copy-env "GOFLAGS")))
+#+END_SRC
+
+** startup
+
+    Boot into org, with the Org scratch space loaded.
+    
+#+BEGIN_SRC emacs-lisp
+  (setq inhibit-startup-screen t)
+  (setq inhibit-splash-screen t)
+  (setq initial-major-mode 'org-mode)
+  (setq initial-scratch-message nil)
+
+  (if (equal command-line-args '("emacs"))
+      (setq initial-buffer-choice "~/Org/scratch.org")
+  )
+#+END_SRC
+
+** global keybindings
+
+   Some binds and unbinds that I find useful.
+
+#+BEGIN_SRC emacs-lisp
+  ;; this was a really fucking annoying, I finally worked out this shortcut was how I was locking up emacs.
+  (global-unset-key (kbd "C-z"))
+#+END_SRC
+  
+** major modes
+
+   High level additional config for major modes to use.
+   Here we map filetypes to major modes, for example.
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'auto-mode-alist '("\\.text\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.mdown\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.sh\\'" . shell-script-mode))
+(add-to-list 'auto-mode-alist '("\\.ledger\\'" . hledger-mode))
+(add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
+(add-to-list 'auto-mode-alist '("\\.asciidoc\\'" . adoc-mode))
+#+END_SRC
+
+** org mode
+
+   Base configuration for Org Mode
+
+*** use-package
+
+    Start the use-package section for org mode configuration to make sure org is loaded before configuring it.
+    
+#+BEGIN_SRC emacs-lisp
+  (use-package org
+	     :config
+	   )
+#+END_SRC
+   
+*** org directories
+
+    Set standard directories for Org files.
+    
+#+BEGIN_SRC emacs-lisp
+  (setq org-directory '("~/Org"))
+  (setq org-agenda-files '("~/Org"))
+  (setq org-default-notes-file '("~/Org/TODO.org"))
+#+END_SRC
+
+*** babel configuration
+
+#+BEGIN_SRC emacs-lisp
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '(
+     (python . t)
+     (shell . t)
+     (emacs-lisp . t)
+     (awk . t)
+     ))
+
+  (setq python-shell-completion-native-enable nil)
+  (setq org-latex-minted-options '(("breaklines" "true")
+				   ("breakanywhere" "true")))
+#+END_SRC
+
+*** extra TODO config
+
+    Add some extra states we can use in TODO lists.
+    Also, enable fast selection of TODO state.
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-todo-keywords
+	(quote ((sequence "TODO(t)"
+			  "NEXT(n!)"
+			  "WAIT(w!)"
+			  "DOING(i!)"
+			  "|"
+			  "DONE(d!)"
+			  ))))
+
+  (setq org-todo-keyword-faces
+	(quote (("TODO" :foreground "red" :weight bold)
+		("NEXT" :foreground "blue" :weight bold)
+		("WAIT" :foreground "orange" :weight bold)
+		("DOING" :foreground "orange" :weight bold)
+		("DONE" :foreground "forest green" :weight bold)
+		)))
+
+  (setq org-use-fast-todo-selection t)
+#+END_SRC
+
+*** org TODO dependencies
+
+    Make sure we can't complete items until all child items are complete.
+    
+#+BEGIN_SRC emacs-lisp
+  (setq org-enforce-todo-dependencies t)
+#+END_SRC
+
+*** org agenda
+
+    Useful keybinding and window behaviour customisation.
+
+#+BEGIN_SRC emacs-lisp
+  (global-set-key (kbd "C-c a") 'org-agenda)
+  (setq org-agenda-window-setup "current-window")
+#+END_SRC
+
+*** org look n' feel
+
+    Change bullet behaviour and look.
+
+#+BEGIN_SRC emacs-lisp
+  (setq org-ellipsis " ►"
+	org-hide-leading-stars t)
+#+END_SRC
+
+
+** development
+*** company
+
+    Company, for completion.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package company
+    :ensure t
+    :config
+    (setq
+     company-minimum-prefix-length 1
+     company-idle-delay 0.0
+     company-tooltip-align-annotations t))
+
+#+END_SRC
+    
+*** flycheck
+
+    Flycheck, for on the fly syntax checking.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package flycheck
+  :ensure t)
+#+END_SRC
+    
+*** configure lsp mode
+
+    Configure language server support for syntax highlighting and code formatting.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package lsp-mode
+    :config
+    (setq lsp-keymap-prefix "C-c l"
+      lsp-modeline-diagnostics-enable t
+      lsp-file-watch-threshold nil
+      lsp-enable-file-watchers t
+      lsp-print-performance nil
+      lsp-log-io nil
+      lsp-idle-delay 0.500
+      company-minimum-prefix-length 1
+      company-idle-delay 0.0
+      company-tooltip-align-annotations t
+      lsp-rust-all-features t      
+      lsp-rust-analyzer-server-command '("~/.cargo/bin/rust-analyzer")
+      lsp-rust-rls-server-command '("~/.cargo/bin/rls")
+      lsp-go-gopls-server-path "~/.go/bin/gopls"
+      lsp-pyls-server-command "~/.pyenv/versions/emacs39/bin/pyls")
+    (lsp-register-custom-settings
+     '(("gopls.completeUnimported" t t)
+       ("gopls.staticcheck" t t)))
+    (defun lsp-save-hooks ()
+      ((add-hook 'before-save-hook #'lsp-format-buffer t t)
+       (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+
+  (use-package lsp-ui :commands lsp-ui-mode)
+  (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+  (use-package lsp-treemacs :commands lsp-treemacs-errors-list))
+#+END_SRC
+
+*** rust
+
+    Enable rust mode, hook to lsp.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package rust-mode
+    :ensure t
+    :hook (rust-mode . lsp-deferred)
+    :bind
+    ("C-c g" . rust-run)
+    ("C-c t" . rust-test)
+    ("C-c b" . cargo-process-build)
+    :init
+    (which-function-mode 1)
+    (setq compilation-error-regexp-alist-alist
+	(cons '(cargo "^\\([^ \n]+\\):\\([0-9]+\\):\\([0-9]+\\): \\([0-9]+\\):\\([0-9]+\\) \\(?:[Ee]rror\\|\\([Ww]arning\\)\\):" 1 (2 . 4) (3 . 5) (6))
+	  compilation-error-regexp-alist-alist)))
+#+END_SRC
+
+*** golang
+
+    Enable go mode, hook to lsp.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package go-mode
+    :ensure t
+    :hook ((go-mode . lsp-deferred)))
+#+END_SRC
+    
+*** python
+
+    Use python mode, hook to lsp.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package python-mode
+    :ensure t
+    :hook ((python-mode . lsp-deferred)))
+#+END_SRC
+    
+*** yaml
+
+    Some YAML formatting configuration.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package yaml-mode
+    :ensure t
+    :init
+    (add-hook 'yaml-mode-hook
+	(lambda ()
+		(define-key yaml-mode-map "\C-m" 'newline-and-indent))))
+#+END_SRC
