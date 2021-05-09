@@ -244,12 +244,25 @@
 
    Configure mu4e and msmtp, as well as contexts and gpg usage.
    
+*** general
+
+    Configure mail settings
+
+#+BEGIN_SRC emacs-lisp
+  (setq mail-user-agent 'mu4e-user-agent)
+#+END_SRC
+
 *** mu4e
 
     Configure mu4e with work and personal contexts.
     
 #+BEGIN_SRC emacs-lisp
   (use-package mu4e
+    :straight (:host github 
+              :repo "djcb/mu"  
+              :branch "master"
+              :files ("mu4e/*")   
+              :pre-build (("./autogen.sh") ("make")))
     :config
     ;; we handle mail syncing elsewhere, so set this to true instead of a command to fetch mail
     (setq mu4e-contexts

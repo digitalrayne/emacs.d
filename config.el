@@ -156,8 +156,17 @@
       org-hide-leading-stars t)
 ;; org look n' feel:1 ends here
 
+;; [[file:config.org::*general][general:1]]
+(setq mail-user-agent 'mu4e-user-agent)
+;; general:1 ends here
+
 ;; [[file:config.org::*mu4e][mu4e:1]]
 (use-package mu4e
+  :straight (:host github 
+            :repo "djcb/mu"  
+            :branch "master"
+            :files ("mu4e/*")   
+            :pre-build (("./autogen.sh") ("make")))
   :config
   ;; we handle mail syncing elsewhere, so set this to true instead of a command to fetch mail
   (setq mu4e-contexts
