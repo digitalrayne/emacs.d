@@ -156,6 +156,82 @@
       org-hide-leading-stars t)
 ;; org look n' feel:1 ends here
 
+;; [[file:config.org::*mu4e][mu4e:1]]
+(use-package mu4e
+  :config
+  ;; we handle mail syncing elsewhere, so set this to true instead of a command to fetch mail
+  (setq mu4e-contexts
+	(list
+	 (make-mu4e-context
+	  :name "personal"
+	  :enter-func (lambda () (mu4e-message "Entering context personal"))
+	  :leave-func (lambda () (mu4e-message "Leaving context personal"))
+	  :match-func (lambda (msg)
+			(when msg
+			  (mu4e-message-contact-field-matches
+			   msg '(:from :to :cc :bcc) "^.*@[ec0.io|hebden.net.au|tachibana.systems]$")))
+	  :vars '((user-mail-address . "james@tachibana.systems")
+		  (user-full-name . "James Hebden")
+		  (mu4e-sent-folder . "/ec0.io/Sent")
+		  (mu4e-drafts-folder . "/ec0.io/Drafts")
+		  (mu4e-trash-folder . "/ec0.io/Trash")
+		  (mu4e-compose-signature . nil)
+		  (mu4e-compose-format-flowed . nil)))
+	 (make-mu4e-context
+	  :name "work"
+	  :enter-func (lambda () (mu4e-message "Entering context work"))
+	  :leave-func (lambda () (mu4e-message "Leaving context work"))
+	  :match-func (lambda (msg)
+			(when msg
+			  (mu4e-message-contact-field-matches
+			   msg '(:from :to :cc :bcc) "^jhebden.+@assetnote.io$")))
+	  :vars '((user-mail-address . "jhebden@assetnote.io")
+		  (user-full-name . "James Hebden")
+		  (mu4e-sent-folder . "/assetnote.io/Sent")
+		  (mu4e-drafts-folder . "/assetnote.io/Drafts")
+		  (mu4e-trash-folder . "/assetnote.io/Trash")
+		  (mu4e-compose-signature . nil)
+		  (mu4e-compose-format-flowed . nil))))
+	mu4e-get-mail-command t
+	mu4e-view-show-addresses t
+	mu4e-attachment-dir (expand-file-name "~/Downloads/")
+	mu4e-maildir "~/Mail"
+	mu4e-html2text-command "w3m -T text/html"
+	;; This sets `mu4e-user-mail-address-list' to the concatenation of all
+	;; `user-mail-address' values for all contexts. If you have other mail
+	;; addresses as well, you'll need to add those manually.
+	mu4e-user-mail-address-list
+	(delq nil
+	      (mapcar (lambda (context)
+			(when (mu4e-context-vars context)
+			  (cdr (assq 'user-mail-address (mu4e-context-vars context)))))
+		      mu4e-contexts))
+	mu4e-context-policy 'pick-first
+	mu4e-compose-context-policy 'always-ask
+	)
+  (defun mu4e-set-from-address ()
+    "Set the From address based on the To address of the original."
+    (let ((msg mu4e-compose-parent-message)) ;; msg is shorter...
+      (when msg
+	(setq user-mail-address
+	      (cond
+	       ((mu4e-message-contact-field-matches msg :to "^.*@[ec0.io|hebden.net.au|tachibana.systems]$")
+		"me@foo.example.com")
+	       ((mu4e-message-contact-field-matches msg :to "^jhebden.+@assetnote.io$")
+		"me@bar.example.com")
+	       (t "me@cuux.example.com"))))))
+  :hook
+  (mu4e-compose-pre . mu4e-set-from-address))
+;; mu4e:1 ends here
+
+;; [[file:config.org::*msmtp][msmtp:1]]
+(setq sendmail-program "/usr/bin/env msmtp"
+      send-mail-function 'smtpmail-send-it
+      message-sendmail-f-is-evil t
+      message-sendmail-extra-arguments '("--read-envelope-from")
+      message-send-mail-function 'message-send-mail-with-sendmail)
+;; msmtp:1 ends here
+
 ;; [[file:config.org::*company][company:1]]
 (use-package company
   :ensure t
