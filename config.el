@@ -8,6 +8,21 @@
 (global-set-key (kbd "C-x C-l") 'reload-config)
 ;; configuration reload helper:1 ends here
 
+;; [[file:config.org::*specpdl and eval depth size][specpdl and eval depth size:1]]
+(setq max-specpdl-size 13000
+      max-lisp-eval-depth 100000)
+;; specpdl and eval depth size:1 ends here
+
+;; [[file:config.org::*key bindings for OSX][key bindings for OSX:1]]
+(when (eq system-type 'darwin)
+  (setq
+   frame-resize-pixelwise t
+   menu-bar-mode t
+   mac-command-modifier 'super
+   mac-option-modifier 'meta
+   mac-control-modifier 'control))
+;; key bindings for OSX:1 ends here
+
 ;; [[file:config.org::*Repos][Repos:1]]
 (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
 			 ("elpa" . "http://tromey.com/elpa/")
@@ -17,15 +32,17 @@
 ;; Repos:1 ends here
 
 ;; [[file:config.org::*Straight][Straight:1]]
+(setq straight-repository-branch "develop"
+      straight-use-package-by-default t)
 (defvar bootstrap-version)
 (let ((bootstrap-file
        (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
       (bootstrap-version 5))
   (unless (file-exists-p bootstrap-file)
     (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
+	(url-retrieve-synchronously
+	 "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	 'silent 'inhibit-cookies)
       (goto-char (point-max))
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
@@ -36,22 +53,24 @@
 (setq straight-use-package-by-default t)
 ;; use-package:1 ends here
 
-;; [[file:config.org::*Look 'n feel][Look 'n feel:1]]
+;; [[file:config.org::*GUI tweaks][GUI tweaks:1]]
 (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
 (set-frame-font "Fantasque Sans Mono 14" nil t)
-;; Look 'n feel:1 ends here
+;; GUI tweaks:1 ends here
 
 ;; [[file:config.org::*Theme][Theme:1]]
-(use-package twilight-theme
+(use-package gruvbox-theme
   :ensure t
   :config
-  (load-theme 'twilight t)
+  (load-theme 'gruvbox t)
   )
 ;; Theme:1 ends here
 
-;; [[file:config.org::*Mode line][Mode line:1]]
-
-;; Mode line:1 ends here
+;; [[file:config.org::*Title line][Title line:1]]
+(setq frame-title-format
+   (list (format "%s %%S: %%j " (system-name))
+     '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
+;; Title line:1 ends here
 
 ;; [[file:config.org::*env][env:1]]
 ;; set the below so tmux knows not to load when we eval .zshrc
@@ -62,6 +81,7 @@
   (when (memq window-system '(mac ns x))
      (exec-path-from-shell-initialize)
 ;; extra environment variables to bring in, in addition to the standard ones like PATH
+     (exec-path-from-shell-copy-env "GOPROXY")
      (exec-path-from-shell-copy-env "GOPATH")
      (exec-path-from-shell-copy-env "GOBIN")
      (exec-path-from-shell-copy-env "GOFLAGS")))
@@ -82,6 +102,17 @@
 ;; this was a really fucking annoying, I finally worked out this shortcut was how I was locking up emacs.
 (global-unset-key (kbd "C-z"))
 ;; global keybindings:1 ends here
+
+;; [[file:config.org::*which key?][which key?:1]]
+(use-package which-key
+  :ensure t)
+;; which key?:1 ends here
+
+;; [[file:config.org::*whitespace][whitespace:1]]
+(use-package ws-butler
+  :ensure t
+  :hook (prog-mode . ws-butler-mode))
+;; whitespace:1 ends here
 
 ;; [[file:config.org::*major modes][major modes:1]]
 (add-to-list 'auto-mode-alist '("\\.text\\'" . markdown-mode))
@@ -156,90 +187,16 @@
       org-hide-leading-stars t)
 ;; org look n' feel:1 ends here
 
-;; [[file:config.org::*general][general:1]]
-(setq mail-user-agent 'mu4e-user-agent)
-;; general:1 ends here
+;; [[file:config.org::*git][git:1]]
+(use-package magit
+  :bind (("C-x g" . magit-status)
+         ("C-x C-g" . magit-status)))
+;; git:1 ends here
 
-;; [[file:config.org::*mu4e][mu4e:1]]
-(use-package mu4e
-  :straight (:host github 
-            :repo "djcb/mu"  
-            :branch "master"
-            :files ("mu4e/*")   
-            :pre-build (("./autogen.sh") ("make")))
-  :config
-  ;; we handle mail syncing elsewhere, so set this to true instead of a command to fetch mail
-  (setq mu4e-contexts
-	(list
-	 (make-mu4e-context
-	  :name "personal"
-	  :enter-func (lambda () (mu4e-message "Entering context personal"))
-	  :leave-func (lambda () (mu4e-message "Leaving context personal"))
-	  :match-func (lambda (msg)
-			(when msg
-			  (mu4e-message-contact-field-matches
-			   msg '(:from :to :cc :bcc) "^.*@[ec0.io|hebden.net.au|tachibana.systems]$")))
-	  :vars '((user-mail-address . "james@tachibana.systems")
-		  (user-full-name . "James Hebden")
-		  (mu4e-sent-folder . "/ec0.io/Sent")
-		  (mu4e-drafts-folder . "/ec0.io/Drafts")
-		  (mu4e-trash-folder . "/ec0.io/Trash")
-		  (mu4e-compose-signature . nil)
-		  (mu4e-compose-format-flowed . nil)))
-	 (make-mu4e-context
-	  :name "work"
-	  :enter-func (lambda () (mu4e-message "Entering context work"))
-	  :leave-func (lambda () (mu4e-message "Leaving context work"))
-	  :match-func (lambda (msg)
-			(when msg
-			  (mu4e-message-contact-field-matches
-			   msg '(:from :to :cc :bcc) "^jhebden.+@assetnote.io$")))
-	  :vars '((user-mail-address . "jhebden@assetnote.io")
-		  (user-full-name . "James Hebden")
-		  (mu4e-sent-folder . "/assetnote.io/Sent")
-		  (mu4e-drafts-folder . "/assetnote.io/Drafts")
-		  (mu4e-trash-folder . "/assetnote.io/Trash")
-		  (mu4e-compose-signature . nil)
-		  (mu4e-compose-format-flowed . nil))))
-	mu4e-get-mail-command t
-	mu4e-view-show-addresses t
-	mu4e-attachment-dir (expand-file-name "~/Downloads/")
-	mu4e-maildir "~/Mail"
-	mu4e-html2text-command "w3m -T text/html"
-	;; This sets `mu4e-user-mail-address-list' to the concatenation of all
-	;; `user-mail-address' values for all contexts. If you have other mail
-	;; addresses as well, you'll need to add those manually.
-	mu4e-user-mail-address-list
-	(delq nil
-	      (mapcar (lambda (context)
-			(when (mu4e-context-vars context)
-			  (cdr (assq 'user-mail-address (mu4e-context-vars context)))))
-		      mu4e-contexts))
-	mu4e-context-policy 'pick-first
-	mu4e-compose-context-policy 'always-ask
-	)
-  (defun mu4e-set-from-address ()
-    "Set the From address based on the To address of the original."
-    (let ((msg mu4e-compose-parent-message)) ;; msg is shorter...
-      (when msg
-	(setq user-mail-address
-	      (cond
-	       ((mu4e-message-contact-field-matches msg :to "^.*@[ec0.io|hebden.net.au|tachibana.systems]$")
-		"me@foo.example.com")
-	       ((mu4e-message-contact-field-matches msg :to "^jhebden.+@assetnote.io$")
-		"me@bar.example.com")
-	       (t "me@cuux.example.com"))))))
-  :hook
-  (mu4e-compose-pre . mu4e-set-from-address))
-;; mu4e:1 ends here
-
-;; [[file:config.org::*msmtp][msmtp:1]]
-(setq sendmail-program "/usr/bin/env msmtp"
-      send-mail-function 'smtpmail-send-it
-      message-sendmail-f-is-evil t
-      message-sendmail-extra-arguments '("--read-envelope-from")
-      message-send-mail-function 'message-send-mail-with-sendmail)
-;; msmtp:1 ends here
+;; [[file:config.org::*projectile][projectile:1]]
+(use-package projectile
+  :ensure t)
+;; projectile:1 ends here
 
 ;; [[file:config.org::*company][company:1]]
 (use-package company
@@ -271,15 +228,19 @@
     company-tooltip-align-annotations t
     lsp-rust-all-features t      
     lsp-rust-analyzer-server-command '("~/.cargo/bin/rust-analyzer")
+    lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
     lsp-rust-rls-server-command '("~/.cargo/bin/rls")
     lsp-go-gopls-server-path "~/.go/bin/gopls"
-    lsp-pyls-server-command "~/.pyenv/versions/emacs39/bin/pyls")
+    lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
   (lsp-register-custom-settings
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)))
   (defun lsp-save-hooks ()
     ((add-hook 'before-save-hook #'lsp-format-buffer t t)
      (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+
+  (with-eval-after-load 'lsp-mode
+    (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
 
 (use-package lsp-ui :commands lsp-ui-mode)
 (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
@@ -300,6 +261,12 @@
       (cons '(cargo "^\\([^ \n]+\\):\\([0-9]+\\):\\([0-9]+\\): \\([0-9]+\\):\\([0-9]+\\) \\(?:[Ee]rror\\|\\([Ww]arning\\)\\):" 1 (2 . 4) (3 . 5) (6))
 	compilation-error-regexp-alist-alist)))
 ;; rust:1 ends here
+
+;; [[file:config.org::*clang / c][clang / c:1]]
+(use-package lsp-mode
+  :ensure t
+  :hook (c-mode . lsp-deferred))
+;; clang / c:1 ends here
 
 ;; [[file:config.org::*golang][golang:1]]
 (use-package go-mode

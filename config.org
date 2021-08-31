@@ -16,6 +16,32 @@
   (global-set-key (kbd "C-x C-l") 'reload-config)
 #+END_SRC
 
+** specpdl and eval depth size
+
+   Bump them up so we avoid issues with some LSP providers:
+   
+#+BEGIN_SRC emacs-lisp
+    (setq max-specpdl-size 13000
+	  max-lisp-eval-depth 100000)
+#+END_SRC
+
+** key bindings for OSX
+
+   Set up modifiers to be consistent on OSX with the emacs-mac tapped version of emacs
+
+#+BEGIN_SRC emacs-lisp
+  (when (eq system-type 'darwin)
+    (setq
+     frame-resize-pixelwise t
+     menu-bar-mode t
+     mac-command-modifier 'super
+     mac-option-modifier 'meta
+     mac-control-modifier 'control))
+#+END_SRC
+
+#+RESULTS:
+: control
+
 ** package management
    
    Package installation is idempotent, using `straight` and `use-package`.
@@ -37,18 +63,20 @@
     Set up straight for installing and updating packages.
 
 #+BEGIN_SRC emacs-lisp
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+  (setq straight-repository-branch "develop"
+        straight-use-package-by-default t)
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+	 (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+	(bootstrap-version 5))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+	  (url-retrieve-synchronously
+	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+	   'silent 'inhibit-cookies)
+	(goto-char (point-max))
+	(eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
 #+END_SRC
 
 *** use-package
@@ -61,7 +89,8 @@
   (setq straight-use-package-by-default t)
 #+END_SRC
 
-*** Look 'n feel
+** Look 'n feel
+*** GUI tweaks   
     
     Disable GUI bits, load the monokai theme, and change the base font.
     
@@ -73,19 +102,21 @@
 *** Theme
     
 #+BEGIN_SRC emacs-lisp    
-  (use-package twilight-theme
+  (use-package gruvbox-theme
     :ensure t
     :config
-    (load-theme 'twilight t)
+    (load-theme 'gruvbox t)
     )
 #+END_SRC
 
-*** TODO Mode line
+*** Title line
     
-    What to show at the bottom of buffers.
+    What to show at the top (window frame) of buffers.
 
 #+BEGIN_SRC emacs-lisp
-
+  (setq frame-title-format
+     (list (format "%s %%S: %%j " (system-name))
+       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
 #+END_SRC
 
 
@@ -102,6 +133,7 @@
     (when (memq window-system '(mac ns x))
        (exec-path-from-shell-initialize)
   ;; extra environment variables to bring in, in addition to the standard ones like PATH
+       (exec-path-from-shell-copy-env "GOPROXY")
        (exec-path-from-shell-copy-env "GOPATH")
        (exec-path-from-shell-copy-env "GOBIN")
        (exec-path-from-shell-copy-env "GOFLAGS")))
@@ -130,21 +162,40 @@
   ;; this was a really fucking annoying, I finally worked out this shortcut was how I was locking up emacs.
   (global-unset-key (kbd "C-z"))
 #+END_SRC
-  
+
+** which key?
+
+   Show possible keybinds as you try desperately top use them.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package which-key
+    :ensure t)
+#+END_SRC
+
+** whitespace
+
+   Ugh, whitespace.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package ws-butler
+    :ensure t
+    :hook (prog-mode . ws-butler-mode))
+#+END_SRC
+
 ** major modes
 
    High level additional config for major modes to use.
    Here we map filetypes to major modes, for example.
 
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'auto-mode-alist '("\\.text\\'" . markdown-mode))
-(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
-(add-to-list 'auto-mode-alist '("\\.mdown\\'" . markdown-mode))
-(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
-(add-to-list 'auto-mode-alist '("\\.sh\\'" . shell-script-mode))
-(add-to-list 'auto-mode-alist '("\\.ledger\\'" . hledger-mode))
-(add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
-(add-to-list 'auto-mode-alist '("\\.asciidoc\\'" . adoc-mode))
+  (add-to-list 'auto-mode-alist '("\\.text\\'" . markdown-mode))
+  (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+  (add-to-list 'auto-mode-alist '("\\.mdown\\'" . markdown-mode))
+  (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
+  (add-to-list 'auto-mode-alist '("\\.sh\\'" . shell-script-mode))
+  (add-to-list 'auto-mode-alist '("\\.ledger\\'" . hledger-mode))
+  (add-to-list 'auto-mode-alist '("\\.adoc\\'" . adoc-mode))
+  (add-to-list 'auto-mode-alist '("\\.asciidoc\\'" . adoc-mode))
 #+END_SRC
 
 ** org mode
@@ -240,109 +291,26 @@
 	org-hide-leading-stars t)
 #+END_SRC
 
-** mail
-
-   Configure mu4e and msmtp, as well as contexts and gpg usage.
-   
-*** general
-
-    Configure mail settings
-
-#+BEGIN_SRC emacs-lisp
-  (setq mail-user-agent 'mu4e-user-agent)
-#+END_SRC
-
-*** mu4e
-
-    Configure mu4e with work and personal contexts.
-    
-#+BEGIN_SRC emacs-lisp
-  (use-package mu4e
-    :straight (:host github 
-              :repo "djcb/mu"  
-              :branch "master"
-              :files ("mu4e/*")   
-              :pre-build (("./autogen.sh") ("make")))
-    :config
-    ;; we handle mail syncing elsewhere, so set this to true instead of a command to fetch mail
-    (setq mu4e-contexts
-	  (list
-	   (make-mu4e-context
-	    :name "personal"
-	    :enter-func (lambda () (mu4e-message "Entering context personal"))
-	    :leave-func (lambda () (mu4e-message "Leaving context personal"))
-	    :match-func (lambda (msg)
-			  (when msg
-			    (mu4e-message-contact-field-matches
-			     msg '(:from :to :cc :bcc) "^.*@[ec0.io|hebden.net.au|tachibana.systems]$")))
-	    :vars '((user-mail-address . "james@tachibana.systems")
-		    (user-full-name . "James Hebden")
-		    (mu4e-sent-folder . "/ec0.io/Sent")
-		    (mu4e-drafts-folder . "/ec0.io/Drafts")
-		    (mu4e-trash-folder . "/ec0.io/Trash")
-		    (mu4e-compose-signature . nil)
-		    (mu4e-compose-format-flowed . nil)))
-	   (make-mu4e-context
-	    :name "work"
-	    :enter-func (lambda () (mu4e-message "Entering context work"))
-	    :leave-func (lambda () (mu4e-message "Leaving context work"))
-	    :match-func (lambda (msg)
-			  (when msg
-			    (mu4e-message-contact-field-matches
-			     msg '(:from :to :cc :bcc) "^jhebden.+@assetnote.io$")))
-	    :vars '((user-mail-address . "jhebden@assetnote.io")
-		    (user-full-name . "James Hebden")
-		    (mu4e-sent-folder . "/assetnote.io/Sent")
-		    (mu4e-drafts-folder . "/assetnote.io/Drafts")
-		    (mu4e-trash-folder . "/assetnote.io/Trash")
-		    (mu4e-compose-signature . nil)
-		    (mu4e-compose-format-flowed . nil))))
-	  mu4e-get-mail-command t
-	  mu4e-view-show-addresses t
-	  mu4e-attachment-dir (expand-file-name "~/Downloads/")
-	  mu4e-maildir "~/Mail"
-	  mu4e-html2text-command "w3m -T text/html"
-	  ;; This sets `mu4e-user-mail-address-list' to the concatenation of all
-	  ;; `user-mail-address' values for all contexts. If you have other mail
-	  ;; addresses as well, you'll need to add those manually.
-	  mu4e-user-mail-address-list
-	  (delq nil
-		(mapcar (lambda (context)
-			  (when (mu4e-context-vars context)
-			    (cdr (assq 'user-mail-address (mu4e-context-vars context)))))
-			mu4e-contexts))
-	  mu4e-context-policy 'pick-first
-	  mu4e-compose-context-policy 'always-ask
-	  )
-    (defun mu4e-set-from-address ()
-      "Set the From address based on the To address of the original."
-      (let ((msg mu4e-compose-parent-message)) ;; msg is shorter...
-	(when msg
-	  (setq user-mail-address
-		(cond
-		 ((mu4e-message-contact-field-matches msg :to "^.*@[ec0.io|hebden.net.au|tachibana.systems]$")
-		  "me@foo.example.com")
-		 ((mu4e-message-contact-field-matches msg :to "^jhebden.+@assetnote.io$")
-		  "me@bar.example.com")
-		 (t "me@cuux.example.com"))))))
-    :hook
-    (mu4e-compose-pre . mu4e-set-from-address))
-
-#+END_SRC
-    
-*** msmtp
-
-    Use msmtp instead of sendmail, and enable reading the account details from the message.
-
-#+BEGIN_SRC emacs-lisp
-(setq sendmail-program "/usr/bin/env msmtp"
-      send-mail-function 'smtpmail-send-it
-      message-sendmail-f-is-evil t
-      message-sendmail-extra-arguments '("--read-envelope-from")
-      message-send-mail-function 'message-send-mail-with-sendmail)
-#+END_SRC
-    
 ** development
+*** git
+
+    Set up magit for magic git things.
+
+#+BEGIN_SRC emacs-lisp
+(use-package magit
+  :bind (("C-x g" . magit-status)
+         ("C-x C-g" . magit-status)))
+#+END_SRC	 
+
+*** projectile
+
+    Projectile, for dealing with project folders.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package projectile
+    :ensure t)
+#+END_SRC
+
 *** company
 
     Company, for completion.
@@ -386,15 +354,19 @@
       company-tooltip-align-annotations t
       lsp-rust-all-features t      
       lsp-rust-analyzer-server-command '("~/.cargo/bin/rust-analyzer")
+      lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
       lsp-rust-rls-server-command '("~/.cargo/bin/rls")
       lsp-go-gopls-server-path "~/.go/bin/gopls"
-      lsp-pyls-server-command "~/.pyenv/versions/emacs39/bin/pyls")
+      lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
     (lsp-register-custom-settings
      '(("gopls.completeUnimported" t t)
        ("gopls.staticcheck" t t)))
     (defun lsp-save-hooks ()
       ((add-hook 'before-save-hook #'lsp-format-buffer t t)
        (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+
+    (with-eval-after-load 'lsp-mode
+      (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
 
   (use-package lsp-ui :commands lsp-ui-mode)
   (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
@@ -418,6 +390,15 @@
     (setq compilation-error-regexp-alist-alist
 	(cons '(cargo "^\\([^ \n]+\\):\\([0-9]+\\):\\([0-9]+\\): \\([0-9]+\\):\\([0-9]+\\) \\(?:[Ee]rror\\|\\([Ww]arning\\)\\):" 1 (2 . 4) (3 . 5) (6))
 	  compilation-error-regexp-alist-alist)))
+#+END_SRC
+
+*** clang / c
+    Enable clang for c support
+
+#+BEGIN_SRC emacs-lisp
+  (use-package lsp-mode
+    :ensure t
+    :hook (c-mode . lsp-deferred))
 #+END_SRC
 
 *** golang
