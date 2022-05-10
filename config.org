@@ -10,8 +10,7 @@
   (defun reload-config ()
     (interactive)
     (load-file user-init-file)
-    (princ "Configuration reloaded.")
-    )
+    (princ "Configuration reloaded."))
 
   (global-set-key (kbd "C-x C-l") 'reload-config)
 #+END_SRC
@@ -21,8 +20,8 @@
    Bump them up so we avoid issues with some LSP providers:
    
 #+BEGIN_SRC emacs-lisp
-    (setq max-specpdl-size 13000
-	  max-lisp-eval-depth 100000)
+    (setq max-specpdl-size 500
+	  max-lisp-eval-depth 1000)
 #+END_SRC
 
 ** key bindings for OSX
@@ -46,7 +45,7 @@
    
    Package installation is idempotent, using `straight` and `use-package`.
 
-*** Repos
+*** repos
     
     Add the GNU, ELPA, MELPA, MELPA-stable, Marmalade and Org repos.
     
@@ -58,7 +57,7 @@
 			   ("org" . "http://orgmode.org/elpa/")))
 #+END_SRC
 
-*** Straight
+*** straight
     
     Set up straight for installing and updating packages.
 
@@ -89,27 +88,37 @@
   (setq straight-use-package-by-default t)
 #+END_SRC
 
-** Look 'n feel
+** look 'n feel
 *** GUI tweaks   
     
     Disable GUI bits, load the monokai theme, and change the base font.
+    Also enables global line mode to highlight the current line.
     
 #+BEGIN_SRC emacs-lisp
-    (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
-    (set-frame-font "Fantasque Sans Mono 14" nil t)
+  (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
+  (if (eq system-type 'darwin)
+    (set-frame-font "Fantasque Sans Mono-14" nil t)
+    (set-frame-font "Fantasque Sans Mono-12" nil t))
+  (global-hl-line-mode 1)
 #+END_SRC
 
-*** Theme
+*** theme
     
 #+BEGIN_SRC emacs-lisp    
   (use-package gruvbox-theme
     :ensure t
     :config
     (load-theme 'gruvbox t)
-    )
+    (custom-theme-set-faces
+     'gruvbox
+     '(org-level-1 ((t (:weight semi-bold :height 2.0))))
+     '(org-level-2 ((t (:weight semi-bold :height 1.5))))
+     '(org-level-3 ((t (:weight semi-bold :height 1.25))))
+     '(org-level-4 ((t (:weight semi-bold :height 1.0)))))
+  )
 #+END_SRC
 
-*** Title line
+*** title line
     
     What to show at the top (window frame) of buffers.
 
@@ -118,7 +127,6 @@
      (list (format "%s %%S: %%j " (system-name))
        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
 #+END_SRC
-
 
 ** env
 
@@ -133,7 +141,6 @@
     (when (memq window-system '(mac ns x))
        (exec-path-from-shell-initialize)
   ;; extra environment variables to bring in, in addition to the standard ones like PATH
-       (exec-path-from-shell-copy-env "GOPROXY")
        (exec-path-from-shell-copy-env "GOPATH")
        (exec-path-from-shell-copy-env "GOBIN")
        (exec-path-from-shell-copy-env "GOFLAGS")))
@@ -163,6 +170,14 @@
   (global-unset-key (kbd "C-z"))
 #+END_SRC
 
+** disable backup files
+
+   Yeah, yeah. I'm sure I'll regret this.
+#+BEGIN_SRC emacs-lisp
+  (setq make-backup-files nil) ; stop creating backup~ files
+  (setq auto-save-default nil) ; stop creating #autosave# files  
+#+END_SRC
+
 ** which key?
 
    Show possible keybinds as you try desperately top use them.
@@ -170,6 +185,35 @@
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
     :ensure t)
+#+END_SRC
+
+** completion
+
+Add nice autocompletion with ivy
+
+#+BEGIN_SRC emacs-lisp
+(use-package counsel
+  :after ivy
+  :config (counsel-mode))
+
+(use-package ivy
+  :defer 0.1
+  :diminish
+  :bind (("C-c C-r" . ivy-resume)
+         ("C-x B" . ivy-switch-buffer-other-window))
+  :custom
+  (ivy-count-format "(%d/%d) ")
+  (ivy-use-virtual-buffers t)
+  :config (ivy-mode))
+
+(use-package ivy-rich
+  :after ivy)
+
+(use-package swiper
+  :after ivy
+  :bind (("C-s" . swiper)
+         ("C-r" . swiper)))
+
 #+END_SRC
 
 ** whitespace
@@ -217,9 +261,35 @@
     Set standard directories for Org files.
     
 #+BEGIN_SRC emacs-lisp
-  (setq org-directory '("~/Org"))
-  (setq org-agenda-files '("~/Org"))
-  (setq org-default-notes-file '("~/Org/TODO.org"))
+  (setq org-directory
+	(cond
+	 ((eq system-type 'darwin)
+	  "~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
+	 ((eq system-type 'gnu/linux)
+	  "~/Org")))  
+  (setq org-agenda-files
+	(cond
+	 ((eq system-type 'darwin)
+	  "~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
+	 ((eq system-type 'gnu/linux)
+	  "~/Org")))  
+  (setq org-default-notes-file
+	(cond
+	 ((eq system-type 'darwin)
+	  "~/Library/Mobile Documents/com~apple~CloudDocs/Org/TODO.org")
+	 ((eq system-type 'gnu/linux)
+	  "~/Org/TODO.org")))
+#+END_SRC
+
+*** org shortcut functions
+#+BEGIN_SRC emacs-lisp
+  (defun org-daily ()
+    (interactive)
+    (let ((daily-name (format-time-string "%Y-%m-%d")))
+      (find-file (expand-file-name (concat org-directory "/Scratch/" daily-name ".org")))))  
+  (defun todo ()
+    (interactive)
+    (find-file (expand-file-name (concat org-directory "/TODO.org"))))
 #+END_SRC
 
 *** babel configuration
@@ -317,12 +387,51 @@
 
 #+BEGIN_SRC emacs-lisp
   (use-package company
-    :ensure t
+    :ensure
+    :custom
+    (company-idle-delay 0.5) ;; how long to wait until popup
+    ;; (company-begin-commands nil) ;; uncomment to disable popup
+    :bind
+    (:map company-active-map
+      ("C-n". company-select-next)
+      ("C-p". company-select-previous)
+      ("M-<". company-select-first)
+      ("M->". company-select-last))
+    (:map company-mode-map
+      ("<tab>". tab-indent-or-complete)
+      ("TAB". tab-indent-or-complete)))
     :config
     (setq
-     company-minimum-prefix-length 1
-     company-idle-delay 0.0
-     company-tooltip-align-annotations t))
+       company-minimum-prefix-length 1
+       company-idle-delay 0.0
+       company-tooltip-align-annotations t)
+
+    (defun company-yasnippet-or-completion ()
+     (interactive)
+     (or (do-yas-expand)
+       (company-complete-common)))
+
+    (defun check-expansion ()
+      (save-excursion
+      (if (looking-at "\\_>") t
+        (backward-char 1)
+      (if (looking-at "\\.") t
+        (backward-char 1)
+      (if (looking-at "::") t nil)))))
+     
+    (defun do-yas-expand ()
+      (let ((yas/fallback-behavior 'return-nil))
+        (yas/expand)))
+     
+    (defun tab-indent-or-complete ()
+      (interactive)
+      (if (minibufferp)
+          (minibuffer-complete)
+      (if (or (not yas/minor-mode)
+          (null (do-yas-expand)))
+      (if (check-expansion)
+          (company-complete-common)
+        (indent-for-tab-command)))))
 
 #+END_SRC
     
@@ -335,12 +444,25 @@
   :ensure t)
 #+END_SRC
     
-*** configure lsp mode
+*** snippets
+
+#+BEGIN_SRC emacs-lisp
+  (use-package yasnippet
+    :ensure
+    :config
+    (yas-reload-all)
+    (add-hook 'prog-mode-hook 'yas-minor-mode)
+    (add-hook 'text-mode-hook 'yas-minor-mode))
+#+END_SRC
+
+*** lsp mode
 
     Configure language server support for syntax highlighting and code formatting.
 
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-mode
+    :ensure
+    :commands lsp
     :config
     (setq lsp-keymap-prefix "C-c l"
       lsp-modeline-diagnostics-enable t
@@ -348,29 +470,35 @@
       lsp-enable-file-watchers t
       lsp-print-performance nil
       lsp-log-io nil
-      lsp-idle-delay 0.500
+      lsp-idle-delay 0.6
+      lsp-eldoc-render-all t
       company-minimum-prefix-length 1
       company-idle-delay 0.0
       company-tooltip-align-annotations t
-      lsp-rust-all-features t      
-      lsp-rust-analyzer-server-command '("~/.cargo/bin/rust-analyzer")
+      lsp-rust-analyzer-cargo-watch-command "clippy"
+      lsp-rust-analyzer-server-display-inlay-hints t
+      lsp-rust-analyzer-server-command '("~/.cargo/bin/rustup run nightly rust-analyzer")
+      lsp-rust-analyzer-proc-macro-enable t
       lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
-      lsp-rust-rls-server-command '("~/.cargo/bin/rls")
       lsp-go-gopls-server-path "~/.go/bin/gopls"
       lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
     (lsp-register-custom-settings
      '(("gopls.completeUnimported" t t)
        ("gopls.staticcheck" t t)))
     (defun lsp-save-hooks ()
-      ((add-hook 'before-save-hook #'lsp-format-buffer t t)
-       (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+       (add-hook 'before-save-hook #'lsp-organize-imports t t))
 
     (with-eval-after-load 'lsp-mode
-      (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
+      (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)))
 
-  (use-package lsp-ui :commands lsp-ui-mode)
+  (use-package lsp-ui
+     :ensure
+     :commands lsp-ui-mode
+     :config
+     (setq lsp-ui-peek-always-show t
+      lsp-ui-sideline-show-hover nil
+      lsp-ui-doc-enable nil))
   (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-  (use-package lsp-treemacs :commands lsp-treemacs-errors-list))
 #+END_SRC
 
 *** rust
@@ -378,18 +506,30 @@
     Enable rust mode, hook to lsp.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package rust-mode
-    :ensure t
-    :hook (rust-mode . lsp-deferred)
+  (use-package rustic
+    :ensure
     :bind
-    ("C-c g" . rust-run)
-    ("C-c t" . rust-test)
-    ("C-c b" . cargo-process-build)
-    :init
-    (which-function-mode 1)
-    (setq compilation-error-regexp-alist-alist
-	(cons '(cargo "^\\([^ \n]+\\):\\([0-9]+\\):\\([0-9]+\\): \\([0-9]+\\):\\([0-9]+\\) \\(?:[Ee]rror\\|\\([Ww]arning\\)\\):" 1 (2 . 4) (3 . 5) (6))
-	  compilation-error-regexp-alist-alist)))
+      (:map rustic-mode-map
+        ("M-j" . lsp-ui-imenu)
+        ("M-?" . lsp-find-references)
+        ("C-c C-c l" . flycheck-list-errors)
+        ("C-c C-c a" . lsp-execute-code-action)
+        ("C-c C-c r" . lsp-rename)
+        ("C-c C-c q" . lsp-workspace-restart)
+        ("C-c C-c Q" . lsp-workspace-shutdown)
+        ("C-c C-c s" . lsp-rust-analyzer-status))
+    :config
+    ;; comment to disable rustfmt on save
+    (setq rustic-format-on-save nil)
+    :hook ((rustic-mode . rk/rustic-mode-hook)))
+
+  (defun rk/rustic-mode-hook ()
+    ;; so that run C-c C-c C-r works without having to confirm, but don't try to
+    ;; save rust buffers that are not file visiting. Once
+    ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
+    ;; no longer be necessary.
+    (when buffer-file-name
+      (setq-local buffer-save-without-query t)))
 #+END_SRC
 
 *** clang / c
@@ -432,4 +572,13 @@
     (add-hook 'yaml-mode-hook
 	(lambda ()
 		(define-key yaml-mode-map "\C-m" 'newline-and-indent))))
+#+END_SRC
+** music!?
+*** mpdel
+#+BEGIN_SRC emacs-lisp
+  (use-package mpdel
+    :ensure t)
+
+  (use-package ivy-mpdel
+    :ensure t)
 #+END_SRC

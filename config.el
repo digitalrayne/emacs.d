@@ -2,15 +2,14 @@
 (defun reload-config ()
   (interactive)
   (load-file user-init-file)
-  (princ "Configuration reloaded.")
-  )
+  (princ "Configuration reloaded."))
 
 (global-set-key (kbd "C-x C-l") 'reload-config)
 ;; configuration reload helper:1 ends here
 
 ;; [[file:config.org::*specpdl and eval depth size][specpdl and eval depth size:1]]
-(setq max-specpdl-size 13000
-      max-lisp-eval-depth 100000)
+(setq max-specpdl-size 500
+      max-lisp-eval-depth 1000)
 ;; specpdl and eval depth size:1 ends here
 
 ;; [[file:config.org::*key bindings for OSX][key bindings for OSX:1]]
@@ -23,15 +22,15 @@
    mac-control-modifier 'control))
 ;; key bindings for OSX:1 ends here
 
-;; [[file:config.org::*Repos][Repos:1]]
+;; [[file:config.org::*repos][repos:1]]
 (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
 			 ("elpa" . "http://tromey.com/elpa/")
 			 ("melpa" . "http://melpa.org/packages/")
 			 ("melpa-stable" . "http://stable.melpa.org/packages/")
 			 ("org" . "http://orgmode.org/elpa/")))
-;; Repos:1 ends here
+;; repos:1 ends here
 
-;; [[file:config.org::*Straight][Straight:1]]
+;; [[file:config.org::*straight][straight:1]]
 (setq straight-repository-branch "develop"
       straight-use-package-by-default t)
 (defvar bootstrap-version)
@@ -46,7 +45,7 @@
       (goto-char (point-max))
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
-;; Straight:1 ends here
+;; straight:1 ends here
 
 ;; [[file:config.org::*use-package][use-package:1]]
 (straight-use-package 'use-package)
@@ -55,22 +54,31 @@
 
 ;; [[file:config.org::*GUI tweaks][GUI tweaks:1]]
 (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
-(set-frame-font "Fantasque Sans Mono 14" nil t)
+(if (eq system-type 'darwin)
+  (set-frame-font "Fantasque Sans Mono-14" nil t)
+  (set-frame-font "Fantasque Sans Mono-12" nil t))
+(global-hl-line-mode 1)
 ;; GUI tweaks:1 ends here
 
-;; [[file:config.org::*Theme][Theme:1]]
+;; [[file:config.org::*theme][theme:1]]
 (use-package gruvbox-theme
   :ensure t
   :config
   (load-theme 'gruvbox t)
-  )
-;; Theme:1 ends here
+  (custom-theme-set-faces
+   'gruvbox
+   '(org-level-1 ((t (:weight semi-bold :height 2.0))))
+   '(org-level-2 ((t (:weight semi-bold :height 1.5))))
+   '(org-level-3 ((t (:weight semi-bold :height 1.25))))
+   '(org-level-4 ((t (:weight semi-bold :height 1.0)))))
+)
+;; theme:1 ends here
 
-;; [[file:config.org::*Title line][Title line:1]]
+;; [[file:config.org::*title line][title line:1]]
 (setq frame-title-format
    (list (format "%s %%S: %%j " (system-name))
      '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
-;; Title line:1 ends here
+;; title line:1 ends here
 
 ;; [[file:config.org::*env][env:1]]
 ;; set the below so tmux knows not to load when we eval .zshrc
@@ -81,7 +89,6 @@
   (when (memq window-system '(mac ns x))
      (exec-path-from-shell-initialize)
 ;; extra environment variables to bring in, in addition to the standard ones like PATH
-     (exec-path-from-shell-copy-env "GOPROXY")
      (exec-path-from-shell-copy-env "GOPATH")
      (exec-path-from-shell-copy-env "GOBIN")
      (exec-path-from-shell-copy-env "GOFLAGS")))
@@ -103,10 +110,39 @@
 (global-unset-key (kbd "C-z"))
 ;; global keybindings:1 ends here
 
+;; [[file:config.org::*disable backup files][disable backup files:1]]
+(setq make-backup-files nil) ; stop creating backup~ files
+(setq auto-save-default nil) ; stop creating #autosave# files
+;; disable backup files:1 ends here
+
 ;; [[file:config.org::*which key?][which key?:1]]
 (use-package which-key
   :ensure t)
 ;; which key?:1 ends here
+
+;; [[file:config.org::*completion][completion:1]]
+(use-package counsel
+  :after ivy
+  :config (counsel-mode))
+
+(use-package ivy
+  :defer 0.1
+  :diminish
+  :bind (("C-c C-r" . ivy-resume)
+         ("C-x B" . ivy-switch-buffer-other-window))
+  :custom
+  (ivy-count-format "(%d/%d) ")
+  (ivy-use-virtual-buffers t)
+  :config (ivy-mode))
+
+(use-package ivy-rich
+  :after ivy)
+
+(use-package swiper
+  :after ivy
+  :bind (("C-s" . swiper)
+         ("C-r" . swiper)))
+;; completion:1 ends here
 
 ;; [[file:config.org::*whitespace][whitespace:1]]
 (use-package ws-butler
@@ -132,10 +168,35 @@
 ;; use-package:1 ends here
 
 ;; [[file:config.org::*org directories][org directories:1]]
-(setq org-directory '("~/Org"))
-(setq org-agenda-files '("~/Org"))
-(setq org-default-notes-file '("~/Org/TODO.org"))
+(setq org-directory
+      (cond
+       ((eq system-type 'darwin)
+	"~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
+       ((eq system-type 'gnu/linux)
+	"~/Org")))  
+(setq org-agenda-files
+      (cond
+       ((eq system-type 'darwin)
+	"~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
+       ((eq system-type 'gnu/linux)
+	"~/Org")))  
+(setq org-default-notes-file
+      (cond
+       ((eq system-type 'darwin)
+	"~/Library/Mobile Documents/com~apple~CloudDocs/Org/TODO.org")
+       ((eq system-type 'gnu/linux)
+	"~/Org/TODO.org")))
 ;; org directories:1 ends here
+
+;; [[file:config.org::*org shortcut functions][org shortcut functions:1]]
+(defun org-daily ()
+  (interactive)
+  (let ((daily-name (format-time-string "%Y-%m-%d")))
+    (find-file (expand-file-name (concat org-directory "/Scratch/" daily-name ".org")))))  
+(defun todo ()
+  (interactive)
+  (find-file (expand-file-name (concat org-directory "/TODO.org"))))
+;; org shortcut functions:1 ends here
 
 ;; [[file:config.org::*babel configuration][babel configuration:1]]
 (org-babel-do-load-languages
@@ -200,12 +261,51 @@
 
 ;; [[file:config.org::*company][company:1]]
 (use-package company
-  :ensure t
+  :ensure
+  :custom
+  (company-idle-delay 0.5) ;; how long to wait until popup
+  ;; (company-begin-commands nil) ;; uncomment to disable popup
+  :bind
+  (:map company-active-map
+    ("C-n". company-select-next)
+    ("C-p". company-select-previous)
+    ("M-<". company-select-first)
+    ("M->". company-select-last))
+  (:map company-mode-map
+    ("<tab>". tab-indent-or-complete)
+    ("TAB". tab-indent-or-complete)))
   :config
   (setq
-   company-minimum-prefix-length 1
-   company-idle-delay 0.0
-   company-tooltip-align-annotations t))
+     company-minimum-prefix-length 1
+     company-idle-delay 0.0
+     company-tooltip-align-annotations t)
+
+  (defun company-yasnippet-or-completion ()
+   (interactive)
+   (or (do-yas-expand)
+     (company-complete-common)))
+
+  (defun check-expansion ()
+    (save-excursion
+    (if (looking-at "\\_>") t
+      (backward-char 1)
+    (if (looking-at "\\.") t
+      (backward-char 1)
+    (if (looking-at "::") t nil)))))
+
+  (defun do-yas-expand ()
+    (let ((yas/fallback-behavior 'return-nil))
+      (yas/expand)))
+
+  (defun tab-indent-or-complete ()
+    (interactive)
+    (if (minibufferp)
+        (minibuffer-complete)
+    (if (or (not yas/minor-mode)
+        (null (do-yas-expand)))
+    (if (check-expansion)
+        (company-complete-common)
+      (indent-for-tab-command)))))
 ;; company:1 ends here
 
 ;; [[file:config.org::*flycheck][flycheck:1]]
@@ -213,8 +313,19 @@
 :ensure t)
 ;; flycheck:1 ends here
 
-;; [[file:config.org::*configure lsp mode][configure lsp mode:1]]
+;; [[file:config.org::*snippets][snippets:1]]
+(use-package yasnippet
+  :ensure
+  :config
+  (yas-reload-all)
+  (add-hook 'prog-mode-hook 'yas-minor-mode)
+  (add-hook 'text-mode-hook 'yas-minor-mode))
+;; snippets:1 ends here
+
+;; [[file:config.org::*lsp mode][lsp mode:1]]
 (use-package lsp-mode
+  :ensure
+  :commands lsp
   :config
   (setq lsp-keymap-prefix "C-c l"
     lsp-modeline-diagnostics-enable t
@@ -222,44 +333,62 @@
     lsp-enable-file-watchers t
     lsp-print-performance nil
     lsp-log-io nil
-    lsp-idle-delay 0.500
+    lsp-idle-delay 0.6
+    lsp-eldoc-render-all t
     company-minimum-prefix-length 1
     company-idle-delay 0.0
     company-tooltip-align-annotations t
-    lsp-rust-all-features t      
-    lsp-rust-analyzer-server-command '("~/.cargo/bin/rust-analyzer")
+    lsp-rust-analyzer-cargo-watch-command "clippy"
+    lsp-rust-analyzer-server-display-inlay-hints t
+    lsp-rust-analyzer-server-command '("~/.cargo/bin/rustup run nightly rust-analyzer")
+    lsp-rust-analyzer-proc-macro-enable t
     lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
-    lsp-rust-rls-server-command '("~/.cargo/bin/rls")
     lsp-go-gopls-server-path "~/.go/bin/gopls"
     lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
   (lsp-register-custom-settings
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)))
   (defun lsp-save-hooks ()
-    ((add-hook 'before-save-hook #'lsp-format-buffer t t)
-     (add-hook 'before-save-hook #'lsp-organize-imports t t)))
+     (add-hook 'before-save-hook #'lsp-organize-imports t t))
 
   (with-eval-after-load 'lsp-mode
-    (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration))
+    (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)))
 
-(use-package lsp-ui :commands lsp-ui-mode)
+(use-package lsp-ui
+   :ensure
+   :commands lsp-ui-mode
+   :config
+   (setq lsp-ui-peek-always-show t
+    lsp-ui-sideline-show-hover nil
+    lsp-ui-doc-enable nil))
 (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-(use-package lsp-treemacs :commands lsp-treemacs-errors-list))
-;; configure lsp mode:1 ends here
+;; lsp mode:1 ends here
 
 ;; [[file:config.org::*rust][rust:1]]
-(use-package rust-mode
-  :ensure t
-  :hook (rust-mode . lsp-deferred)
+(use-package rustic
+  :ensure
   :bind
-  ("C-c g" . rust-run)
-  ("C-c t" . rust-test)
-  ("C-c b" . cargo-process-build)
-  :init
-  (which-function-mode 1)
-  (setq compilation-error-regexp-alist-alist
-      (cons '(cargo "^\\([^ \n]+\\):\\([0-9]+\\):\\([0-9]+\\): \\([0-9]+\\):\\([0-9]+\\) \\(?:[Ee]rror\\|\\([Ww]arning\\)\\):" 1 (2 . 4) (3 . 5) (6))
-	compilation-error-regexp-alist-alist)))
+    (:map rustic-mode-map
+      ("M-j" . lsp-ui-imenu)
+      ("M-?" . lsp-find-references)
+      ("C-c C-c l" . flycheck-list-errors)
+      ("C-c C-c a" . lsp-execute-code-action)
+      ("C-c C-c r" . lsp-rename)
+      ("C-c C-c q" . lsp-workspace-restart)
+      ("C-c C-c Q" . lsp-workspace-shutdown)
+      ("C-c C-c s" . lsp-rust-analyzer-status))
+  :config
+  ;; comment to disable rustfmt on save
+  (setq rustic-format-on-save nil)
+  :hook ((rustic-mode . rk/rustic-mode-hook)))
+
+(defun rk/rustic-mode-hook ()
+  ;; so that run C-c C-c C-r works without having to confirm, but don't try to
+  ;; save rust buffers that are not file visiting. Once
+  ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
+  ;; no longer be necessary.
+  (when buffer-file-name
+    (setq-local buffer-save-without-query t)))
 ;; rust:1 ends here
 
 ;; [[file:config.org::*clang / c][clang / c:1]]
@@ -288,3 +417,11 @@
       (lambda ()
 	      (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
 ;; yaml:1 ends here
+
+;; [[file:config.org::*mpdel][mpdel:1]]
+(use-package mpdel
+  :ensure t)
+
+(use-package ivy-mpdel
+  :ensure t)
+;; mpdel:1 ends here
