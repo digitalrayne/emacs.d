@@ -12,6 +12,10 @@
       max-lisp-eval-depth 1000)
 ;; specpdl and eval depth size:1 ends here
 
+;; [[file:config.org::*add some extra paths][add some extra paths:1]]
+(setq exec-path (append exec-path '("/usr/local/bin" "/usr/bin")))
+;; add some extra paths:1 ends here
+
 ;; [[file:config.org::*key bindings for OSX][key bindings for OSX:1]]
 (when (eq system-type 'darwin)
   (setq
@@ -61,12 +65,12 @@
 ;; GUI tweaks:1 ends here
 
 ;; [[file:config.org::*theme][theme:1]]
-(use-package gruvbox-theme
+(use-package modus-themes
   :ensure t
   :config
-  (load-theme 'gruvbox t)
+  (load-theme 'modus-vivendi t)
   (custom-theme-set-faces
-   'gruvbox
+   'modus-vivendi
    '(org-level-1 ((t (:weight semi-bold :height 2.0))))
    '(org-level-2 ((t (:weight semi-bold :height 1.5))))
    '(org-level-3 ((t (:weight semi-bold :height 1.25))))
@@ -119,6 +123,11 @@
 (use-package which-key
   :ensure t)
 ;; which key?:1 ends here
+
+;; [[file:config.org::*vterm][vterm:1]]
+(use-package vterm
+  :ensure t)
+;; vterm:1 ends here
 
 ;; [[file:config.org::*completion][completion:1]]
 (use-package counsel

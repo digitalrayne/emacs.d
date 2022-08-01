@@ -24,6 +24,14 @@
 	  max-lisp-eval-depth 1000)
 #+END_SRC
 
+** add some extra paths
+
+   Under OSX we need /usr/local/bin and friends so we can find git
+
+#+BEGIN_SRC emacs-lisp
+(setq exec-path (append exec-path '("/usr/local/bin" "/usr/bin")))
+#+END_SRC
+
 ** key bindings for OSX
 
    Set up modifiers to be consistent on OSX with the emacs-mac tapped version of emacs
@@ -105,12 +113,12 @@
 *** theme
     
 #+BEGIN_SRC emacs-lisp    
-  (use-package gruvbox-theme
+  (use-package modus-themes
     :ensure t
     :config
-    (load-theme 'gruvbox t)
+    (load-theme 'modus-vivendi t)
     (custom-theme-set-faces
-     'gruvbox
+     'modus-vivendi
      '(org-level-1 ((t (:weight semi-bold :height 2.0))))
      '(org-level-2 ((t (:weight semi-bold :height 1.5))))
      '(org-level-3 ((t (:weight semi-bold :height 1.25))))
@@ -186,6 +194,16 @@
   (use-package which-key
     :ensure t)
 #+END_SRC
+
+** vterm
+
+   Terminal
+
+#+BEGIN_SRC emacs-lisp
+  (use-package vterm
+    :ensure t)
+#+END_SRC
+
 
 ** completion
 
