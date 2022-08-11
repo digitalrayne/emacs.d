@@ -1,6 +1,9 @@
 ;; [[file:config.org::*configuration reload helper][configuration reload helper:1]]
 (defun reload-config ()
   (interactive)
+  (org-babel-load-file
+  (expand-file-name "config.org"
+                 user-emacs-directory))
   (load-file user-init-file)
   (princ "Configuration reloaded."))
 
@@ -13,7 +16,7 @@
 ;; specpdl and eval depth size:1 ends here
 
 ;; [[file:config.org::*add some extra paths][add some extra paths:1]]
-(setq exec-path (append exec-path '("/usr/local/bin" "/usr/bin")))
+(setq exec-path (append exec-path '("/usr/local/bin" "/opt/homebrew/bin" "/usr/bin")))
 ;; add some extra paths:1 ends here
 
 ;; [[file:config.org::*key bindings for OSX][key bindings for OSX:1]]
@@ -34,26 +37,13 @@
 			 ("org" . "http://orgmode.org/elpa/")))
 ;; repos:1 ends here
 
-;; [[file:config.org::*straight][straight:1]]
-(setq straight-repository-branch "develop"
-      straight-use-package-by-default t)
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-	(url-retrieve-synchronously
-	 "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-	 'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
-;; straight:1 ends here
-
 ;; [[file:config.org::*use-package][use-package:1]]
-(straight-use-package 'use-package)
-(setq straight-use-package-by-default t)
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+(eval-and-compile
+  (setq use-package-always-ensure t
+	use-package-expand-minimally t))
 ;; use-package:1 ends here
 
 ;; [[file:config.org::*GUI tweaks][GUI tweaks:1]]
@@ -101,16 +91,11 @@
 ;; [[file:config.org::*startup][startup:1]]
 (setq inhibit-startup-screen t)
 (setq inhibit-splash-screen t)
-(setq initial-major-mode 'org-mode)
 (setq initial-scratch-message nil)
-
-(if (equal command-line-args '("emacs"))
-    (setq initial-buffer-choice "~/Org/scratch.org")
-)
 ;; startup:1 ends here
 
 ;; [[file:config.org::*global keybindings][global keybindings:1]]
-;; this was a really fucking annoying, I finally worked out this shortcut was how I was locking up emacs.
+;; this was a really fucking annoying process, I finally worked out this shortcut was how I was locking up emacs.
 (global-unset-key (kbd "C-z"))
 ;; global keybindings:1 ends here
 
@@ -128,30 +113,6 @@
 (use-package vterm
   :ensure t)
 ;; vterm:1 ends here
-
-;; [[file:config.org::*completion][completion:1]]
-(use-package counsel
-  :after ivy
-  :config (counsel-mode))
-
-(use-package ivy
-  :defer 0.1
-  :diminish
-  :bind (("C-c C-r" . ivy-resume)
-         ("C-x B" . ivy-switch-buffer-other-window))
-  :custom
-  (ivy-count-format "(%d/%d) ")
-  (ivy-use-virtual-buffers t)
-  :config (ivy-mode))
-
-(use-package ivy-rich
-  :after ivy)
-
-(use-package swiper
-  :after ivy
-  :bind (("C-s" . swiper)
-         ("C-r" . swiper)))
-;; completion:1 ends here
 
 ;; [[file:config.org::*whitespace][whitespace:1]]
 (use-package ws-butler
@@ -197,66 +158,6 @@
 	"~/Org/TODO.org")))
 ;; org directories:1 ends here
 
-;; [[file:config.org::*org shortcut functions][org shortcut functions:1]]
-(defun org-daily ()
-  (interactive)
-  (let ((daily-name (format-time-string "%Y-%m-%d")))
-    (find-file (expand-file-name (concat org-directory "/Scratch/" daily-name ".org")))))  
-(defun todo ()
-  (interactive)
-  (find-file (expand-file-name (concat org-directory "/TODO.org"))))
-;; org shortcut functions:1 ends here
-
-;; [[file:config.org::*babel configuration][babel configuration:1]]
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '(
-   (python . t)
-   (shell . t)
-   (emacs-lisp . t)
-   (awk . t)
-   ))
-
-(setq python-shell-completion-native-enable nil)
-(setq org-latex-minted-options '(("breaklines" "true")
-				 ("breakanywhere" "true")))
-;; babel configuration:1 ends here
-
-;; [[file:config.org::*extra TODO config][extra TODO config:1]]
-(setq org-todo-keywords
-      (quote ((sequence "TODO(t)"
-			"NEXT(n!)"
-			"WAIT(w!)"
-			"DOING(i!)"
-			"|"
-			"DONE(d!)"
-			))))
-
-(setq org-todo-keyword-faces
-      (quote (("TODO" :foreground "red" :weight bold)
-	      ("NEXT" :foreground "blue" :weight bold)
-	      ("WAIT" :foreground "orange" :weight bold)
-	      ("DOING" :foreground "orange" :weight bold)
-	      ("DONE" :foreground "forest green" :weight bold)
-	      )))
-
-(setq org-use-fast-todo-selection t)
-;; extra TODO config:1 ends here
-
-;; [[file:config.org::*org TODO dependencies][org TODO dependencies:1]]
-(setq org-enforce-todo-dependencies t)
-;; org TODO dependencies:1 ends here
-
-;; [[file:config.org::*org agenda][org agenda:1]]
-(global-set-key (kbd "C-c a") 'org-agenda)
-(setq org-agenda-window-setup "current-window")
-;; org agenda:1 ends here
-
-;; [[file:config.org::*org look n' feel][org look n' feel:1]]
-(setq org-ellipsis " ►"
-      org-hide-leading-stars t)
-;; org look n' feel:1 ends here
-
 ;; [[file:config.org::*git][git:1]]
 (use-package magit
   :bind (("C-x g" . magit-status)
@@ -289,11 +190,6 @@
      company-idle-delay 0.0
      company-tooltip-align-annotations t)
 
-  (defun company-yasnippet-or-completion ()
-   (interactive)
-   (or (do-yas-expand)
-     (company-complete-common)))
-
   (defun check-expansion ()
     (save-excursion
     (if (looking-at "\\_>") t
@@ -301,20 +197,6 @@
     (if (looking-at "\\.") t
       (backward-char 1)
     (if (looking-at "::") t nil)))))
-
-  (defun do-yas-expand ()
-    (let ((yas/fallback-behavior 'return-nil))
-      (yas/expand)))
-
-  (defun tab-indent-or-complete ()
-    (interactive)
-    (if (minibufferp)
-        (minibuffer-complete)
-    (if (or (not yas/minor-mode)
-        (null (do-yas-expand)))
-    (if (check-expansion)
-        (company-complete-common)
-      (indent-for-tab-command)))))
 ;; company:1 ends here
 
 ;; [[file:config.org::*flycheck][flycheck:1]]
@@ -322,43 +204,31 @@
 :ensure t)
 ;; flycheck:1 ends here
 
-;; [[file:config.org::*snippets][snippets:1]]
-(use-package yasnippet
-  :ensure
-  :config
-  (yas-reload-all)
-  (add-hook 'prog-mode-hook 'yas-minor-mode)
-  (add-hook 'text-mode-hook 'yas-minor-mode))
-;; snippets:1 ends here
-
-;; [[file:config.org::*lsp mode][lsp mode:1]]
+;; [[file:config.org::*Ruby via solargraph][Ruby via solargraph:1]]
 (use-package lsp-mode
   :ensure
   :commands lsp
-  :config
+  :init
   (setq lsp-keymap-prefix "C-c l"
     lsp-modeline-diagnostics-enable t
     lsp-file-watch-threshold nil
     lsp-enable-file-watchers t
     lsp-print-performance nil
-    lsp-log-io nil
     lsp-idle-delay 0.6
     lsp-eldoc-render-all t
     company-minimum-prefix-length 1
     company-idle-delay 0.0
     company-tooltip-align-annotations t
-    lsp-rust-analyzer-cargo-watch-command "clippy"
     lsp-rust-analyzer-server-display-inlay-hints t
-    lsp-rust-analyzer-server-command '("~/.cargo/bin/rustup run nightly rust-analyzer")
     lsp-rust-analyzer-proc-macro-enable t
+    lsp-rust-analyzer-server-command (list (replace-regexp-in-string "\n$" "" (shell-command-to-string "rustup which rust-analyzer")))
     lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
     lsp-go-gopls-server-path "~/.go/bin/gopls"
     lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
+  :config
   (lsp-register-custom-settings
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)))
-  (defun lsp-save-hooks ()
-     (add-hook 'before-save-hook #'lsp-organize-imports t t))
 
   (with-eval-after-load 'lsp-mode
     (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)))
@@ -370,14 +240,13 @@
    (setq lsp-ui-peek-always-show t
     lsp-ui-sideline-show-hover nil
     lsp-ui-doc-enable nil))
-(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-;; lsp mode:1 ends here
+;; Ruby via solargraph:1 ends here
 
 ;; [[file:config.org::*rust][rust:1]]
-(use-package rustic
+(use-package rust-mode
   :ensure
   :bind
-    (:map rustic-mode-map
+    (:map rust-mode-map
       ("M-j" . lsp-ui-imenu)
       ("M-?" . lsp-find-references)
       ("C-c C-c l" . flycheck-list-errors)
@@ -386,18 +255,7 @@
       ("C-c C-c q" . lsp-workspace-restart)
       ("C-c C-c Q" . lsp-workspace-shutdown)
       ("C-c C-c s" . lsp-rust-analyzer-status))
-  :config
-  ;; comment to disable rustfmt on save
-  (setq rustic-format-on-save nil)
-  :hook ((rustic-mode . rk/rustic-mode-hook)))
-
-(defun rk/rustic-mode-hook ()
-  ;; so that run C-c C-c C-r works without having to confirm, but don't try to
-  ;; save rust buffers that are not file visiting. Once
-  ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
-  ;; no longer be necessary.
-  (when buffer-file-name
-    (setq-local buffer-save-without-query t)))
+  :hook ((rust-mode . lsp-deferred)))
 ;; rust:1 ends here
 
 ;; [[file:config.org::*clang / c][clang / c:1]]
@@ -426,11 +284,3 @@
       (lambda ()
 	      (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
 ;; yaml:1 ends here
-
-;; [[file:config.org::*mpdel][mpdel:1]]
-(use-package mpdel
-  :ensure t)
-
-(use-package ivy-mpdel
-  :ensure t)
-;; mpdel:1 ends here

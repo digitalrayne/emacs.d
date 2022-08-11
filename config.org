@@ -9,6 +9,9 @@
 #+BEGIN_SRC emacs-lisp
   (defun reload-config ()
     (interactive)
+    (org-babel-load-file
+    (expand-file-name "config.org"
+                   user-emacs-directory))
     (load-file user-init-file)
     (princ "Configuration reloaded."))
 
@@ -29,7 +32,7 @@
    Under OSX we need /usr/local/bin and friends so we can find git
 
 #+BEGIN_SRC emacs-lisp
-(setq exec-path (append exec-path '("/usr/local/bin" "/usr/bin")))
+(setq exec-path (append exec-path '("/usr/local/bin" "/opt/homebrew/bin" "/usr/bin")))
 #+END_SRC
 
 ** key bindings for OSX
@@ -51,7 +54,7 @@
 
 ** package management
    
-   Package installation is idempotent, using `straight` and `use-package`.
+   Package installation is idempotent, using `use-package`.
 
 *** repos
     
@@ -65,35 +68,17 @@
 			   ("org" . "http://orgmode.org/elpa/")))
 #+END_SRC
 
-*** straight
-    
-    Set up straight for installing and updating packages.
-
-#+BEGIN_SRC emacs-lisp
-  (setq straight-repository-branch "develop"
-        straight-use-package-by-default t)
-  (defvar bootstrap-version)
-  (let ((bootstrap-file
-	 (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-	(bootstrap-version 5))
-    (unless (file-exists-p bootstrap-file)
-      (with-current-buffer
-	  (url-retrieve-synchronously
-	   "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-	   'silent 'inhibit-cookies)
-	(goto-char (point-max))
-	(eval-print-last-sexp)))
-    (load bootstrap-file nil 'nomessage))
-#+END_SRC
-
 *** use-package
     
     Set up use-package for organsing package configuration.
-    We also configure straight to use use-package to actually install packages.
 
 #+BEGIN_SRC emacs-lisp
-  (straight-use-package 'use-package)
-  (setq straight-use-package-by-default t)
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+  (eval-and-compile
+    (setq use-package-always-ensure t
+	  use-package-expand-minimally t))
 #+END_SRC
 
 ** look 'n feel
@@ -161,12 +146,7 @@
 #+BEGIN_SRC emacs-lisp
   (setq inhibit-startup-screen t)
   (setq inhibit-splash-screen t)
-  (setq initial-major-mode 'org-mode)
   (setq initial-scratch-message nil)
-
-  (if (equal command-line-args '("emacs"))
-      (setq initial-buffer-choice "~/Org/scratch.org")
-  )
 #+END_SRC
 
 ** global keybindings
@@ -174,13 +154,14 @@
    Some binds and unbinds that I find useful.
 
 #+BEGIN_SRC emacs-lisp
-  ;; this was a really fucking annoying, I finally worked out this shortcut was how I was locking up emacs.
+  ;; this was a really fucking annoying process, I finally worked out this shortcut was how I was locking up emacs.
   (global-unset-key (kbd "C-z"))
 #+END_SRC
 
 ** disable backup files
 
    Yeah, yeah. I'm sure I'll regret this.
+   
 #+BEGIN_SRC emacs-lisp
   (setq make-backup-files nil) ; stop creating backup~ files
   (setq auto-save-default nil) ; stop creating #autosave# files  
@@ -188,7 +169,7 @@
 
 ** which key?
 
-   Show possible keybinds as you try desperately top use them.
+   Show possible keybinds as you try desperately to find them.
 
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
@@ -202,36 +183,6 @@
 #+BEGIN_SRC emacs-lisp
   (use-package vterm
     :ensure t)
-#+END_SRC
-
-
-** completion
-
-Add nice autocompletion with ivy
-
-#+BEGIN_SRC emacs-lisp
-(use-package counsel
-  :after ivy
-  :config (counsel-mode))
-
-(use-package ivy
-  :defer 0.1
-  :diminish
-  :bind (("C-c C-r" . ivy-resume)
-         ("C-x B" . ivy-switch-buffer-other-window))
-  :custom
-  (ivy-count-format "(%d/%d) ")
-  (ivy-use-virtual-buffers t)
-  :config (ivy-mode))
-
-(use-package ivy-rich
-  :after ivy)
-
-(use-package swiper
-  :after ivy
-  :bind (("C-s" . swiper)
-         ("C-r" . swiper)))
-
 #+END_SRC
 
 ** whitespace
@@ -299,86 +250,6 @@ Add nice autocompletion with ivy
 	  "~/Org/TODO.org")))
 #+END_SRC
 
-*** org shortcut functions
-#+BEGIN_SRC emacs-lisp
-  (defun org-daily ()
-    (interactive)
-    (let ((daily-name (format-time-string "%Y-%m-%d")))
-      (find-file (expand-file-name (concat org-directory "/Scratch/" daily-name ".org")))))  
-  (defun todo ()
-    (interactive)
-    (find-file (expand-file-name (concat org-directory "/TODO.org"))))
-#+END_SRC
-
-*** babel configuration
-
-#+BEGIN_SRC emacs-lisp
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '(
-     (python . t)
-     (shell . t)
-     (emacs-lisp . t)
-     (awk . t)
-     ))
-
-  (setq python-shell-completion-native-enable nil)
-  (setq org-latex-minted-options '(("breaklines" "true")
-				   ("breakanywhere" "true")))
-#+END_SRC
-
-*** extra TODO config
-
-    Add some extra states we can use in TODO lists.
-    Also, enable fast selection of TODO state.
-
-#+BEGIN_SRC emacs-lisp
-  (setq org-todo-keywords
-	(quote ((sequence "TODO(t)"
-			  "NEXT(n!)"
-			  "WAIT(w!)"
-			  "DOING(i!)"
-			  "|"
-			  "DONE(d!)"
-			  ))))
-
-  (setq org-todo-keyword-faces
-	(quote (("TODO" :foreground "red" :weight bold)
-		("NEXT" :foreground "blue" :weight bold)
-		("WAIT" :foreground "orange" :weight bold)
-		("DOING" :foreground "orange" :weight bold)
-		("DONE" :foreground "forest green" :weight bold)
-		)))
-
-  (setq org-use-fast-todo-selection t)
-#+END_SRC
-
-*** org TODO dependencies
-
-    Make sure we can't complete items until all child items are complete.
-    
-#+BEGIN_SRC emacs-lisp
-  (setq org-enforce-todo-dependencies t)
-#+END_SRC
-
-*** org agenda
-
-    Useful keybinding and window behaviour customisation.
-
-#+BEGIN_SRC emacs-lisp
-  (global-set-key (kbd "C-c a") 'org-agenda)
-  (setq org-agenda-window-setup "current-window")
-#+END_SRC
-
-*** org look n' feel
-
-    Change bullet behaviour and look.
-
-#+BEGIN_SRC emacs-lisp
-  (setq org-ellipsis " ►"
-	org-hide-leading-stars t)
-#+END_SRC
-
 ** development
 *** git
 
@@ -424,11 +295,6 @@ Add nice autocompletion with ivy
        company-idle-delay 0.0
        company-tooltip-align-annotations t)
 
-    (defun company-yasnippet-or-completion ()
-     (interactive)
-     (or (do-yas-expand)
-       (company-complete-common)))
-
     (defun check-expansion ()
       (save-excursion
       (if (looking-at "\\_>") t
@@ -437,20 +303,6 @@ Add nice autocompletion with ivy
         (backward-char 1)
       (if (looking-at "::") t nil)))))
      
-    (defun do-yas-expand ()
-      (let ((yas/fallback-behavior 'return-nil))
-        (yas/expand)))
-     
-    (defun tab-indent-or-complete ()
-      (interactive)
-      (if (minibufferp)
-          (minibuffer-complete)
-      (if (or (not yas/minor-mode)
-          (null (do-yas-expand)))
-      (if (check-expansion)
-          (company-complete-common)
-        (indent-for-tab-command)))))
-
 #+END_SRC
     
 *** flycheck
@@ -462,49 +314,38 @@ Add nice autocompletion with ivy
   :ensure t)
 #+END_SRC
     
-*** snippets
-
-#+BEGIN_SRC emacs-lisp
-  (use-package yasnippet
-    :ensure
-    :config
-    (yas-reload-all)
-    (add-hook 'prog-mode-hook 'yas-minor-mode)
-    (add-hook 'text-mode-hook 'yas-minor-mode))
-#+END_SRC
-
 *** lsp mode
 
     Configure language server support for syntax highlighting and code formatting.
+    Some settings in lsp-mode use defcustom to define variables - in this case using setq in :config doesn't seem to work.
 
+**** TODO Ruby via solargraph
+    
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-mode
     :ensure
     :commands lsp
-    :config
+    :init
     (setq lsp-keymap-prefix "C-c l"
       lsp-modeline-diagnostics-enable t
       lsp-file-watch-threshold nil
       lsp-enable-file-watchers t
       lsp-print-performance nil
-      lsp-log-io nil
       lsp-idle-delay 0.6
       lsp-eldoc-render-all t
       company-minimum-prefix-length 1
       company-idle-delay 0.0
       company-tooltip-align-annotations t
-      lsp-rust-analyzer-cargo-watch-command "clippy"
       lsp-rust-analyzer-server-display-inlay-hints t
-      lsp-rust-analyzer-server-command '("~/.cargo/bin/rustup run nightly rust-analyzer")
       lsp-rust-analyzer-proc-macro-enable t
+      lsp-rust-analyzer-server-command (list (replace-regexp-in-string "\n$" "" (shell-command-to-string "rustup which rust-analyzer")))
       lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
       lsp-go-gopls-server-path "~/.go/bin/gopls"
       lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
+    :config
     (lsp-register-custom-settings
      '(("gopls.completeUnimported" t t)
        ("gopls.staticcheck" t t)))
-    (defun lsp-save-hooks ()
-       (add-hook 'before-save-hook #'lsp-organize-imports t t))
 
     (with-eval-after-load 'lsp-mode
       (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)))
@@ -516,7 +357,6 @@ Add nice autocompletion with ivy
      (setq lsp-ui-peek-always-show t
       lsp-ui-sideline-show-hover nil
       lsp-ui-doc-enable nil))
-  (use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
 #+END_SRC
 
 *** rust
@@ -524,30 +364,20 @@ Add nice autocompletion with ivy
     Enable rust mode, hook to lsp.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package rustic
+  (use-package rust-mode
     :ensure
     :bind
-      (:map rustic-mode-map
-        ("M-j" . lsp-ui-imenu)
-        ("M-?" . lsp-find-references)
-        ("C-c C-c l" . flycheck-list-errors)
-        ("C-c C-c a" . lsp-execute-code-action)
-        ("C-c C-c r" . lsp-rename)
-        ("C-c C-c q" . lsp-workspace-restart)
-        ("C-c C-c Q" . lsp-workspace-shutdown)
-        ("C-c C-c s" . lsp-rust-analyzer-status))
-    :config
-    ;; comment to disable rustfmt on save
-    (setq rustic-format-on-save nil)
-    :hook ((rustic-mode . rk/rustic-mode-hook)))
+      (:map rust-mode-map
+	("M-j" . lsp-ui-imenu)
+	("M-?" . lsp-find-references)
+	("C-c C-c l" . flycheck-list-errors)
+	("C-c C-c a" . lsp-execute-code-action)
+	("C-c C-c r" . lsp-rename)
+	("C-c C-c q" . lsp-workspace-restart)
+	("C-c C-c Q" . lsp-workspace-shutdown)
+	("C-c C-c s" . lsp-rust-analyzer-status))
+    :hook ((rust-mode . lsp-deferred)))
 
-  (defun rk/rustic-mode-hook ()
-    ;; so that run C-c C-c C-r works without having to confirm, but don't try to
-    ;; save rust buffers that are not file visiting. Once
-    ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
-    ;; no longer be necessary.
-    (when buffer-file-name
-      (setq-local buffer-save-without-query t)))
 #+END_SRC
 
 *** clang / c
@@ -590,13 +420,4 @@ Add nice autocompletion with ivy
     (add-hook 'yaml-mode-hook
 	(lambda ()
 		(define-key yaml-mode-map "\C-m" 'newline-and-indent))))
-#+END_SRC
-** music!?
-*** mpdel
-#+BEGIN_SRC emacs-lisp
-  (use-package mpdel
-    :ensure t)
-
-  (use-package ivy-mpdel
-    :ensure t)
 #+END_SRC
