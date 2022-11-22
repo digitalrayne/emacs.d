@@ -133,8 +133,8 @@
 
 ;; [[file:config.org::*use-package][use-package:1]]
 (use-package org
-	   :config
-	 )
+  :config
+  )
 ;; use-package:1 ends here
 
 ;; [[file:config.org::*org directories][org directories:1]]
@@ -158,6 +158,23 @@
 	"~/Org/TODO.org")))
 ;; org directories:1 ends here
 
+;; [[file:config.org::*org inline images][org inline images:1]]
+(setq org-startup-with-inline-images t)
+;; org inline images:1 ends here
+
+;; [[file:config.org::*org mermaid][org mermaid:1]]
+(use-package ob-mermaid
+  :config
+  (org-babel-do-load-languages
+  'org-babel-load-languages
+  '((mermaid . t)
+    (scheme . t)))
+)
+(add-hook 'org-babel-after-execute-hook
+	  (lambda ()
+	    (org-redisplay-inline-images)))
+;; org mermaid:1 ends here
+
 ;; [[file:config.org::*git][git:1]]
 (use-package magit
   :bind (("C-x g" . magit-status)
@@ -169,26 +186,57 @@
   :ensure t)
 ;; projectile:1 ends here
 
+;; [[file:config.org::*flymake][flymake:1]]
+(use-package flymake
+  :ensure nil
+  :config
+  (define-key flymake-mode-map (kbd "M-n") 'flymake-goto-next-error)
+  (define-key flymake-mode-map (kbd "M-p") 'flymake-goto-prev-error))
+;; flymake:1 ends here
+
+;; [[file:config.org::*rust mode][rust mode:1]]
+(use-package rust-mode
+  :ensure t)
+;; rust mode:1 ends here
+
+;; [[file:config.org::*eglot (LSP)][eglot (LSP):1]]
+(use-package eglot
+  :ensure t
+  :hook ((go-mode . eglot-ensure)
+	 (ruby-mode . eglot-ensure)
+	 (rust-mode . eglot-ensure)
+	 (python-mode . eglot-ensure)
+	 (c-mode . eglot-ensure))
+  :config
+  (setq eglot-workspace-configuration
+  '((:gopls .
+      ((staticcheck . t)
+       (matcher . "CaseSensitive")))))
+  (add-to-list 'eglot-server-programs '(go-mode "~/.go/bin/gopls"))
+  (add-to-list 'eglot-server-programs '(python-mode "~/.pyenv/versions/emacs39/bin/pylsp"))
+  (add-to-list 'eglot-server-programs '(c-mode "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd")))
+;; eglot (LSP):1 ends here
+
 ;; [[file:config.org::*company][company:1]]
 (use-package company
-  :ensure
+  :ensure t
+  :after eglot
+  :hook (eglot-managed-mode . company-mode)
   :custom
   (company-idle-delay 0.5) ;; how long to wait until popup
   ;; (company-begin-commands nil) ;; uncomment to disable popup
   :bind
   (:map company-active-map
-    ("C-n". company-select-next)
-    ("C-p". company-select-previous)
-    ("M-<". company-select-first)
-    ("M->". company-select-last))
-  (:map company-mode-map
-    ("<tab>". tab-indent-or-complete)
-    ("TAB". tab-indent-or-complete)))
+	("C-n". company-select-next)
+	("C-p". company-select-previous)
+	("M-<". company-select-first)
+	("M->". company-select-last))
   :config
   (setq
-     company-minimum-prefix-length 1
-     company-idle-delay 0.0
-     company-tooltip-align-annotations t)
+   company-minimum-prefix-length 1
+   company-idle-delay 0.0
+   company-tooltip-align-annotations t
+   tab-always-indent 'complete)
 
   (defun check-expansion ()
     (save-excursion
@@ -196,85 +244,8 @@
       (backward-char 1)
     (if (looking-at "\\.") t
       (backward-char 1)
-    (if (looking-at "::") t nil)))))
+    (if (looking-at "::") t nil))))))
 ;; company:1 ends here
-
-;; [[file:config.org::*flycheck][flycheck:1]]
-(use-package flycheck
-:ensure t)
-;; flycheck:1 ends here
-
-;; [[file:config.org::*Ruby via solargraph][Ruby via solargraph:1]]
-(use-package lsp-mode
-  :ensure
-  :commands lsp
-  :init
-  (setq lsp-keymap-prefix "C-c l"
-    lsp-modeline-diagnostics-enable t
-    lsp-file-watch-threshold nil
-    lsp-enable-file-watchers t
-    lsp-print-performance nil
-    lsp-idle-delay 0.6
-    lsp-eldoc-render-all t
-    company-minimum-prefix-length 1
-    company-idle-delay 0.0
-    company-tooltip-align-annotations t
-    lsp-rust-analyzer-server-display-inlay-hints t
-    lsp-rust-analyzer-proc-macro-enable t
-    lsp-rust-analyzer-server-command (list (replace-regexp-in-string "\n$" "" (shell-command-to-string "rustup which rust-analyzer")))
-    lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
-    lsp-go-gopls-server-path "~/.go/bin/gopls"
-    lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
-  :config
-  (lsp-register-custom-settings
-   '(("gopls.completeUnimported" t t)
-     ("gopls.staticcheck" t t)))
-
-  (with-eval-after-load 'lsp-mode
-    (add-hook 'lsp-mode-hook #'lsp-enable-which-key-integration)))
-
-(use-package lsp-ui
-   :ensure
-   :commands lsp-ui-mode
-   :config
-   (setq lsp-ui-peek-always-show t
-    lsp-ui-sideline-show-hover nil
-    lsp-ui-doc-enable nil))
-;; Ruby via solargraph:1 ends here
-
-;; [[file:config.org::*rust][rust:1]]
-(use-package rust-mode
-  :ensure
-  :bind
-    (:map rust-mode-map
-      ("M-j" . lsp-ui-imenu)
-      ("M-?" . lsp-find-references)
-      ("C-c C-c l" . flycheck-list-errors)
-      ("C-c C-c a" . lsp-execute-code-action)
-      ("C-c C-c r" . lsp-rename)
-      ("C-c C-c q" . lsp-workspace-restart)
-      ("C-c C-c Q" . lsp-workspace-shutdown)
-      ("C-c C-c s" . lsp-rust-analyzer-status))
-  :hook ((rust-mode . lsp-deferred)))
-;; rust:1 ends here
-
-;; [[file:config.org::*clang / c][clang / c:1]]
-(use-package lsp-mode
-  :ensure t
-  :hook (c-mode . lsp-deferred))
-;; clang / c:1 ends here
-
-;; [[file:config.org::*golang][golang:1]]
-(use-package go-mode
-  :ensure t
-  :hook ((go-mode . lsp-deferred)))
-;; golang:1 ends here
-
-;; [[file:config.org::*python][python:1]]
-(use-package python-mode
-  :ensure t
-  :hook ((python-mode . lsp-deferred)))
-;; python:1 ends here
 
 ;; [[file:config.org::*yaml][yaml:1]]
 (use-package yaml-mode
@@ -284,3 +255,21 @@
       (lambda ()
 	      (define-key yaml-mode-map "\C-m" 'newline-and-indent))))
 ;; yaml:1 ends here
+
+;; [[file:config.org::*mastodon][mastodon:1]]
+(use-package mastodon
+  :ensure t
+  :config
+  (setq mastodon-instance-url "https://"
+    mastodon-active-user "ec0"))
+;; mastodon:1 ends here
+
+;; [[file:config.org::*matrix][matrix:1]]
+(use-package ement
+  :ensure t)
+;; matrix:1 ends here
+
+;; [[file:config.org::*mpedel][mpedel:1]]
+(use-package mpdel
+  :ensure t)
+;; mpedel:1 ends here
