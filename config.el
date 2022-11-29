@@ -1,4 +1,4 @@
-;; [[file:config.org::*configuration reload helper][configuration reload helper:1]]
+;; [[file:config.org::*Configuration reload helper][Configuration reload helper:1]]
 (defun reload-config ()
   (interactive)
   (org-babel-load-file
@@ -8,18 +8,18 @@
   (princ "Configuration reloaded."))
 
 (global-set-key (kbd "C-x C-l") 'reload-config)
-;; configuration reload helper:1 ends here
+;; Configuration reload helper:1 ends here
 
-;; [[file:config.org::*specpdl and eval depth size][specpdl and eval depth size:1]]
+;; [[file:config.org::*Tune specpdl and eval depth size][Tune specpdl and eval depth size:1]]
 (setq max-specpdl-size 500
       max-lisp-eval-depth 1000)
-;; specpdl and eval depth size:1 ends here
+;; Tune specpdl and eval depth size:1 ends here
 
-;; [[file:config.org::*add some extra paths][add some extra paths:1]]
+;; [[file:config.org::*Add some useful OS PATHs][Add some useful OS PATHs:1]]
 (setq exec-path (append exec-path '("/usr/local/bin" "/opt/homebrew/bin" "/usr/bin")))
-;; add some extra paths:1 ends here
+;; Add some useful OS PATHs:1 ends here
 
-;; [[file:config.org::*key bindings for OSX][key bindings for OSX:1]]
+;; [[file:config.org::*Set key bindings for OSX][Set key bindings for OSX:1]]
 (when (eq system-type 'darwin)
   (setq
    frame-resize-pixelwise t
@@ -27,24 +27,24 @@
    mac-command-modifier 'super
    mac-option-modifier 'meta
    mac-control-modifier 'control))
-;; key bindings for OSX:1 ends here
+;; Set key bindings for OSX:1 ends here
 
-;; [[file:config.org::*repos][repos:1]]
+;; [[file:config.org::*Repos][Repos:1]]
 (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
 			 ("elpa" . "http://tromey.com/elpa/")
 			 ("melpa" . "http://melpa.org/packages/")
 			 ("melpa-stable" . "http://stable.melpa.org/packages/")
 			 ("org" . "http://orgmode.org/elpa/")))
-;; repos:1 ends here
+;; Repos:1 ends here
 
-;; [[file:config.org::*use-package][use-package:1]]
+;; [[file:config.org::*Set up use-package][Set up use-package:1]]
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
 (eval-and-compile
   (setq use-package-always-ensure t
 	use-package-expand-minimally t))
-;; use-package:1 ends here
+;; Set up use-package:1 ends here
 
 ;; [[file:config.org::*GUI tweaks][GUI tweaks:1]]
 (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
@@ -54,7 +54,7 @@
 (global-hl-line-mode 1)
 ;; GUI tweaks:1 ends here
 
-;; [[file:config.org::*theme][theme:1]]
+;; [[file:config.org::*Theme][Theme:1]]
 (use-package modus-themes
   :ensure t
   :config
@@ -66,27 +66,13 @@
    '(org-level-3 ((t (:weight semi-bold :height 1.25))))
    '(org-level-4 ((t (:weight semi-bold :height 1.0)))))
 )
-;; theme:1 ends here
+;; Theme:1 ends here
 
-;; [[file:config.org::*title line][title line:1]]
+;; [[file:config.org::*Title line][Title line:1]]
 (setq frame-title-format
    (list (format "%s %%S: %%j " (system-name))
      '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
-;; title line:1 ends here
-
-;; [[file:config.org::*env][env:1]]
-;; set the below so tmux knows not to load when we eval .zshrc
-;; this is respected by ohmyzsh's tmux plugin
-(setenv "EMACS" "1")
-(use-package exec-path-from-shell
-  :init
-  (when (memq window-system '(mac ns x))
-     (exec-path-from-shell-initialize)
-;; extra environment variables to bring in, in addition to the standard ones like PATH
-     (exec-path-from-shell-copy-env "GOPATH")
-     (exec-path-from-shell-copy-env "GOBIN")
-     (exec-path-from-shell-copy-env "GOFLAGS")))
-;; env:1 ends here
+;; Title line:1 ends here
 
 ;; [[file:config.org::*startup][startup:1]]
 (setq inhibit-startup-screen t)
@@ -106,7 +92,8 @@
 
 ;; [[file:config.org::*which key?][which key?:1]]
 (use-package which-key
-  :ensure t)
+  :config
+  (which-key-mode))
 ;; which key?:1 ends here
 
 ;; [[file:config.org::*vterm][vterm:1]]
@@ -199,23 +186,50 @@
   :ensure t)
 ;; rust mode:1 ends here
 
-;; [[file:config.org::*eglot (LSP)][eglot (LSP):1]]
-(use-package eglot
+;; [[file:config.org::*LSP (lsp-mode)][LSP (lsp-mode):1]]
+(use-package lsp-mode
   :ensure t
-  :hook ((go-mode . eglot-ensure)
-	 (ruby-mode . eglot-ensure)
-	 (rust-mode . eglot-ensure)
-	 (python-mode . eglot-ensure)
-	 (c-mode . eglot-ensure))
+  :hook ((go-mode . lsp)
+	 (ruby-mode . lsp)
+	 (rust-mode . lsp)
+	 (python-mode . lsp)
+	 (c-mode . lsp)
+	 (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp
+  :bind
+  (("C-c C-c r" . lsp-restart-workspace))
+  :init
+  (setq lsp-keymap-prefix "C-c l"
+	lsp-modeline-diagnostics-enable t
+	lsp-file-watch-threshold nil
+	lsp-enable-file-watchers t
+	lsp-print-performance nil
+	lsp-idle-delay 0.6
+	lsp-eldoc-render-all t
+	lsp-rust-analyzer-server-display-inlay-hints t
+	lsp-rust-analyzer-proc-macro-enable t
+	lsp-rust-analyzer-server-command (list (replace-regexp-in-string "\n$" "" (shell-command-to-string "rustup which rust-analyzer")))
+	lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
+	lsp-go-gopls-server-path "~/.go/bin/gopls"
+	lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
   :config
-  (setq eglot-workspace-configuration
-  '((:gopls .
-      ((staticcheck . t)
-       (matcher . "CaseSensitive")))))
-  (add-to-list 'eglot-server-programs '(go-mode "~/.go/bin/gopls"))
-  (add-to-list 'eglot-server-programs '(python-mode "~/.pyenv/versions/emacs39/bin/pylsp"))
-  (add-to-list 'eglot-server-programs '(c-mode "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd")))
-;; eglot (LSP):1 ends here
+  (lsp-register-custom-settings
+   '(("gopls.completeUnimported" t t)
+     ("gopls.staticcheck" t t)
+     ("gopls.matcher" "CaseSensitive"))))
+
+(use-package lsp-ui :commands lsp-ui-mode)
+;; LSP (lsp-mode):1 ends here
+
+;; [[file:config.org::*flycheck][flycheck:1]]
+(use-package flycheck
+  :ensure t
+  :bind
+  (("C-c C-c l" . flycheck-list-errors)
+   ("C-c C-c n" . flycheck-next-error)
+   ("C-c C-c p" . flycheck-previous-error)
+   ("C-c C-c 1" . flycheck-first-error)))
+;; flycheck:1 ends here
 
 ;; [[file:config.org::*company][company:1]]
 (use-package company
@@ -269,7 +283,7 @@
   :ensure t)
 ;; matrix:1 ends here
 
-;; [[file:config.org::*mpedel][mpedel:1]]
+;; [[file:config.org::*mpdel][mpdel:1]]
 (use-package mpdel
   :ensure t)
-;; mpedel:1 ends here
+;; mpdel:1 ends here

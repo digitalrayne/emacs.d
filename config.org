@@ -1,8 +1,8 @@
 #+PROPERTY: header-args :comments link
 
-* emacs configuration
+* Emacs configuration
   
-** configuration reload helper
+** Configuration reload helper
    
    `C-x C-l`: reload this file.
 
@@ -18,26 +18,26 @@
   (global-set-key (kbd "C-x C-l") 'reload-config)
 #+END_SRC
 
-** specpdl and eval depth size
+** Tune specpdl and eval depth size
 
-   Bump them up so we avoid issues with some LSP providers:
+Bump them up so we avoid issues with some LSP providers:
    
 #+BEGIN_SRC emacs-lisp
     (setq max-specpdl-size 500
 	  max-lisp-eval-depth 1000)
 #+END_SRC
 
-** add some extra paths
+** Add some useful OS PATHs
 
-   Under OSX we need /usr/local/bin and friends so we can find git
+Under OSX we need /usr/local/bin and friends so we can find git
 
 #+BEGIN_SRC emacs-lisp
 (setq exec-path (append exec-path '("/usr/local/bin" "/opt/homebrew/bin" "/usr/bin")))
 #+END_SRC
 
-** key bindings for OSX
+** Set key bindings for OSX
 
-   Set up modifiers to be consistent on OSX with the emacs-mac tapped version of emacs
+Set up modifiers to be consistent on OSX with the emacs-mac tapped version of emacs
 
 #+BEGIN_SRC emacs-lisp
   (when (eq system-type 'darwin)
@@ -52,13 +52,13 @@
 #+RESULTS:
 : control
 
-** package management
+** Package management
    
-   Package installation is idempotent, using `use-package`.
+Package installation is idempotent, using `use-package`.
 
-*** repos
+*** Repos
     
-    Add the GNU, ELPA, MELPA, MELPA-stable, Marmalade and Org repos.
+Add the GNU, ELPA, MELPA, MELPA-stable, Marmalade and Org repos.
     
 #+BEGIN_SRC emacs-lisp
   (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
@@ -68,9 +68,9 @@
 			   ("org" . "http://orgmode.org/elpa/")))
 #+END_SRC
 
-*** use-package
+*** Set up use-package
     
-    Set up use-package for organsing package configuration.
+Set up use-package for organising package configuration.
 
 #+BEGIN_SRC emacs-lisp
   (unless (package-installed-p 'use-package)
@@ -81,7 +81,7 @@
 	  use-package-expand-minimally t))
 #+END_SRC
 
-** look 'n feel
+** Look 'n feel
 *** GUI tweaks   
     
     Disable GUI bits, load the monokai theme, and change the base font.
@@ -95,7 +95,7 @@
   (global-hl-line-mode 1)
 #+END_SRC
 
-*** theme
+*** Theme
     
 #+BEGIN_SRC emacs-lisp    
   (use-package modus-themes
@@ -111,9 +111,9 @@
   )
 #+END_SRC
 
-*** title line
+*** Title line
     
-    What to show at the top (window frame) of buffers.
+What to show at the top (window frame) of buffers.
 
 #+BEGIN_SRC emacs-lisp
   (setq frame-title-format
@@ -121,27 +121,9 @@
        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
 #+END_SRC
 
-** env
-
-   Set environment variables and PATH, as well as loading `exec-env-from-shell` to grab environment variables set by zsh.
-
-#+BEGIN_SRC emacs-lisp
-  ;; set the below so tmux knows not to load when we eval .zshrc
-  ;; this is respected by ohmyzsh's tmux plugin
-  (setenv "EMACS" "1")
-  (use-package exec-path-from-shell
-    :init
-    (when (memq window-system '(mac ns x))
-       (exec-path-from-shell-initialize)
-  ;; extra environment variables to bring in, in addition to the standard ones like PATH
-       (exec-path-from-shell-copy-env "GOPATH")
-       (exec-path-from-shell-copy-env "GOBIN")
-       (exec-path-from-shell-copy-env "GOFLAGS")))
-#+END_SRC
-
 ** startup
 
-    Boot into org, with the Org scratch space loaded.
+Boot into org, with the Org scratch space loaded.
     
 #+BEGIN_SRC emacs-lisp
   (setq inhibit-startup-screen t)
@@ -173,7 +155,8 @@
 
 #+BEGIN_SRC emacs-lisp
   (use-package which-key
-    :ensure t)
+    :config
+    (which-key-mode))  
 #+END_SRC
 
 ** vterm
@@ -314,32 +297,64 @@
     :ensure t)
 #+END_SRC
 
-*** eglot (LSP)
+*** LSP (lsp-mode)
 
     Configure language server support for syntax highlighting and code formatting.
-    Use eglot becuase it is part of emacs from v29 onwards, and it is much simpler out of the box.
+    I tried eglot, but inlay hints were not supported for Rust which is a deal breaker.
 
 #+BEGIN_SRC emacs-lisp
-    (use-package eglot
-      :ensure t
-      :hook ((go-mode . eglot-ensure)
-	     (ruby-mode . eglot-ensure)
-	     (rust-mode . eglot-ensure)
-	     (python-mode . eglot-ensure)
-	     (c-mode . eglot-ensure))
-      :config
-      (setq eglot-workspace-configuration
-      '((:gopls .
-	  ((staticcheck . t)
-	   (matcher . "CaseSensitive")))))
-      (add-to-list 'eglot-server-programs '(go-mode "~/.go/bin/gopls"))
-      (add-to-list 'eglot-server-programs '(python-mode "~/.pyenv/versions/emacs39/bin/pylsp"))
-      (add-to-list 'eglot-server-programs '(c-mode "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd")))
+  (use-package lsp-mode
+    :ensure t
+    :hook ((go-mode . lsp)
+	   (ruby-mode . lsp)
+	   (rust-mode . lsp)
+	   (python-mode . lsp)
+	   (c-mode . lsp)
+	   (lsp-mode . lsp-enable-which-key-integration))
+    :commands lsp
+    :bind
+    (("C-c C-c r" . lsp-restart-workspace))
+    :init
+    (setq lsp-keymap-prefix "C-c l"
+	  lsp-modeline-diagnostics-enable t
+	  lsp-file-watch-threshold nil
+	  lsp-enable-file-watchers t
+	  lsp-print-performance nil
+	  lsp-idle-delay 0.6
+	  lsp-eldoc-render-all t
+	  lsp-rust-analyzer-server-display-inlay-hints t
+	  lsp-rust-analyzer-proc-macro-enable t
+	  lsp-rust-analyzer-server-command (list (replace-regexp-in-string "\n$" "" (shell-command-to-string "rustup which rust-analyzer")))
+	  lsp-clangd-binary-path "/System/Volumes/Data/Library/Developer/CommandLineTools/usr/bin/clangd"
+	  lsp-go-gopls-server-path "~/.go/bin/gopls"
+	  lsp-pylsp-server-command "~/.pyenv/versions/emacs39/bin/pylsp")
+    :config
+    (lsp-register-custom-settings
+     '(("gopls.completeUnimported" t t)
+       ("gopls.staticcheck" t t)
+       ("gopls.matcher" "CaseSensitive"))))
+
+  (use-package lsp-ui :commands lsp-ui-mode)
+
 #+END_SRC
+
+*** flycheck
+
+Flycheck, for syntax checking.
+
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :ensure t
+    :bind
+    (("C-c C-c l" . flycheck-list-errors)
+     ("C-c C-c n" . flycheck-next-error)
+     ("C-c C-c p" . flycheck-previous-error)
+     ("C-c C-c 1" . flycheck-first-error)))
+#+end_src
 
 *** company
 
-    Company, for completion.
+Company, for completion.
 
 #+BEGIN_SRC emacs-lisp
   (use-package company
@@ -389,7 +404,7 @@
 
 *** mastodon
 
-set up our emacs mastodon client because really, this is how it must be.
+Set up our emacs mastodon client because really, this is how it must be. It must.
 
 #+begin_src emacs-lisp
 	(use-package mastodon
@@ -401,7 +416,7 @@ set up our emacs mastodon client because really, this is how it must be.
 
 *** matrix
 
-set up ement for matrix in emacs
+Set up ement for matrix in emacs
 
 #+begin_src emacs-lisp
 	(use-package ement
@@ -409,7 +424,7 @@ set up ement for matrix in emacs
 #+end_src
 
 ** m...music?
-*** mpedel
+*** mpdel
 
 I use mpd for playing music, and mpdel is a tidy way to drive it via emacs.
 
