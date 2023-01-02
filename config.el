@@ -15,6 +15,10 @@
       max-lisp-eval-depth 1000)
 ;; Tune specpdl and eval depth size:1 ends here
 
+;; [[file:config.org::*Set minimum native-comp warning level][Set minimum native-comp warning level:1]]
+(setq warning-minimum-level :error)
+;; Set minimum native-comp warning level:1 ends here
+
 ;; [[file:config.org::*Add some useful OS PATHs][Add some useful OS PATHs:1]]
 (setq exec-path (append exec-path '("/usr/local/bin" "/opt/homebrew/bin" "/usr/bin")))
 ;; Add some useful OS PATHs:1 ends here
@@ -45,6 +49,12 @@
   (setq use-package-always-ensure t
 	use-package-expand-minimally t))
 ;; Set up use-package:1 ends here
+
+;; [[file:config.org::*Icons][Icons:1]]
+(use-package all-the-icons
+  :if (display-graphic-p)
+  :ensure t)
+;; Icons:1 ends here
 
 ;; [[file:config.org::*GUI tweaks][GUI tweaks:1]]
 (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
@@ -126,23 +136,11 @@
 
 ;; [[file:config.org::*org directories][org directories:1]]
 (setq org-directory
-      (cond
-       ((eq system-type 'darwin)
-	"~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
-       ((eq system-type 'gnu/linux)
-	"~/Org")))  
+	"~/Org")
 (setq org-agenda-files
-      (cond
-       ((eq system-type 'darwin)
-	"~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
-       ((eq system-type 'gnu/linux)
-	"~/Org")))  
+	'("~/Org"))
 (setq org-default-notes-file
-      (cond
-       ((eq system-type 'darwin)
-	"~/Library/Mobile Documents/com~apple~CloudDocs/Org/TODO.org")
-       ((eq system-type 'gnu/linux)
-	"~/Org/TODO.org")))
+	"~/Org/TODO.org")
 ;; org directories:1 ends here
 
 ;; [[file:config.org::*org inline images][org inline images:1]]
@@ -170,7 +168,13 @@
 
 ;; [[file:config.org::*projectile][projectile:1]]
 (use-package projectile
-  :ensure t)
+  :ensure t
+  :pin melpa-stable
+  :init
+  (projectile-mode +1)
+  :bind (:map projectile-mode-map
+              ("s-p" . projectile-command-map)
+              ("C-c p" . projectile-command-map)))
 ;; projectile:1 ends here
 
 ;; [[file:config.org::*flymake][flymake:1]]
@@ -287,3 +291,23 @@
 (use-package mpdel
   :ensure t)
 ;; mpdel:1 ends here
+
+;; [[file:config.org::*a nice dashboard][a nice dashboard:1]]
+(use-package dashboard
+  :ensure t
+  :config
+  (dashboard-setup-startup-hook))
+  (setq
+   initial-buffer-choice (lambda () (get-buffer "*dashboard*"))
+   dashboard-set-footer nil
+   dashboard-projects-backend 'projectile
+   dashboard-set-init-info t
+   dashboard-set-navigator t
+   dashboard-set-heading-icons t
+   dashboard-set-file-icons t
+   dashboard-items '((recents  . 5)
+		     (bookmarks . 5)
+		     (projects . 5)
+		     (agenda . 5)
+		     (registers . 5)))
+;; a nice dashboard:1 ends here

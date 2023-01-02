@@ -27,6 +27,12 @@ Bump them up so we avoid issues with some LSP providers:
 	  max-lisp-eval-depth 1000)
 #+END_SRC
 
+** Set minimum native-comp warning level
+
+#+begin_src emacs-lisp
+  (setq warning-minimum-level :error)
+#+end_src
+
 ** Add some useful OS PATHs
 
 Under OSX we need /usr/local/bin and friends so we can find git
@@ -82,10 +88,20 @@ Set up use-package for organising package configuration.
 #+END_SRC
 
 ** Look 'n feel
+*** Icons
+
+Install a bunch of icons. Note, you need to run `all-the-icons-install-fonts` if the fonts are not already installed.
+    
+#+begin_src emacs-lisp
+      (use-package all-the-icons
+	:if (display-graphic-p)
+	:ensure t)
+#+end_src
+
 *** GUI tweaks   
     
-    Disable GUI bits, load the monokai theme, and change the base font.
-    Also enables global line mode to highlight the current line.
+Disable GUI bits, load the monokai theme, and change the base font.
+Also enables global line mode to highlight the current line.
     
 #+BEGIN_SRC emacs-lisp
   (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
@@ -214,23 +230,11 @@ Boot into org, with the Org scratch space loaded.
     
 #+BEGIN_SRC emacs-lisp
   (setq org-directory
-	(cond
-	 ((eq system-type 'darwin)
-	  "~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
-	 ((eq system-type 'gnu/linux)
-	  "~/Org")))  
+	  "~/Org")
   (setq org-agenda-files
-	(cond
-	 ((eq system-type 'darwin)
-	  "~/Library/Mobile Documents/com~apple~CloudDocs/Org/")
-	 ((eq system-type 'gnu/linux)
-	  "~/Org")))  
+	  '("~/Org"))
   (setq org-default-notes-file
-	(cond
-	 ((eq system-type 'darwin)
-	  "~/Library/Mobile Documents/com~apple~CloudDocs/Org/TODO.org")
-	 ((eq system-type 'gnu/linux)
-	  "~/Org/TODO.org")))
+	  "~/Org/TODO.org")
 #+END_SRC
 
 *** org inline images
@@ -272,8 +276,14 @@ Boot into org, with the Org scratch space loaded.
     Projectile, for dealing with project folders.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package projectile
-    :ensure t)
+(use-package projectile
+  :ensure t
+  :pin melpa-stable
+  :init
+  (projectile-mode +1)
+  :bind (:map projectile-mode-map
+              ("s-p" . projectile-command-map)
+              ("C-c p" . projectile-command-map)))  
 #+END_SRC
 
 *** flymake
@@ -402,6 +412,10 @@ Company, for completion.
 
 ** comms
 
+*** mail (mu4e)
+
+
+
 *** mastodon
 
 Set up our emacs mastodon client because really, this is how it must be. It must.
@@ -431,4 +445,27 @@ I use mpd for playing music, and mpdel is a tidy way to drive it via emacs.
 #+begin_src emacs-lisp
   (use-package mpdel
     :ensure t)
+#+end_src
+
+** dashboard
+*** a nice dashboard
+
+#+begin_src emacs-lisp
+  (use-package dashboard
+    :ensure t
+    :config
+    (dashboard-setup-startup-hook))
+    (setq
+     initial-buffer-choice (lambda () (get-buffer "*dashboard*"))
+     dashboard-set-footer nil
+     dashboard-projects-backend 'projectile
+     dashboard-set-init-info t
+     dashboard-set-navigator t
+     dashboard-set-heading-icons t
+     dashboard-set-file-icons t
+     dashboard-items '((recents  . 5)
+		       (bookmarks . 5)
+		       (projects . 5)
+		       (agenda . 5)
+		       (registers . 5)))
 #+end_src
