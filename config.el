@@ -59,8 +59,8 @@
 ;; [[file:config.org::*GUI tweaks][GUI tweaks:1]]
 (menu-bar-mode -1) (tool-bar-mode -1) (scroll-bar-mode -1)
 (if (eq system-type 'darwin)
-  (set-frame-font "Fantasque Sans Mono-14" nil t)
-  (set-frame-font "Fantasque Sans Mono-12" nil t))
+  (set-frame-font "Sarasa Mono J-14:Regular" nil t)
+  (set-frame-font "Sarasa Mono J-12:Regular" nil t))
 (global-hl-line-mode 1)
 ;; GUI tweaks:1 ends here
 
